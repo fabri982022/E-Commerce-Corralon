@@ -1,16 +1,18 @@
 package e.commerce.digital.models;
-import jakarta.persistence.*;
-import lombok.*;
 
+import e.commerce.digital.util.enumerated.Rol;
+import jakarta.persistence.DiscriminatorValue;
+import jakarta.persistence.Entity;
+import lombok.Getter;
+import lombok.Setter;
 
 @Entity
 @Getter
 @Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@EqualsAndHashCode(callSuper = true)
 @DiscriminatorValue("ADMIN")
-
 public class UsuarioAdmin extends Usuario {
-    // Additional fields and methods specific to UsuarioAdmin can be added here
+
+    public UsuarioAdmin() {
+        setRol(Rol.ADMIN);
+    }
 }

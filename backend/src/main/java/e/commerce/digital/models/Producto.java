@@ -1,6 +1,7 @@
 package e.commerce.digital.models;
+
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -11,7 +12,6 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "productos")
 public class Producto {
 
@@ -25,19 +25,21 @@ public class Producto {
     @Column(length = 500)
     private String descripcion;
 
+    @PositiveOrZero
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal precio;
 
-    @Column(name = "stock_disponible", nullable = false)
-    private Integer stockDisponible;
+    @PositiveOrZero
+    @Column(nullable = false)
+    private Integer stock;
 
     @Column(name = "imagen_url", length = 255)
     private String imagenUrl;
 
-    @Column(name = "estado", nullable = false)
-    private String estado;
+    @Column(nullable = false)
+    private Boolean activo = true;
 
-    // Producto *** 1 Subcategorias (sin cascade: la subcategoría existe por sí sola)
+    // Producto *--- 1 Subcategoria (sin cascade)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_subcategoria", nullable = false)
     private Subcategorias subcategoria;

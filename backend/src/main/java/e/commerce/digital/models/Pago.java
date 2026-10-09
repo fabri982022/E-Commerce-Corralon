@@ -1,6 +1,7 @@
 package e.commerce.digital.models;
+
+import e.commerce.digital.util.enumerated.EstadoPago;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,7 +13,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "pagos")
 public class Pago {
 
@@ -24,20 +24,24 @@ public class Pago {
     private String metodo;
 
     @Column(nullable = false, precision = 12, scale = 2)
-    private BigDecimal monto;
+    private BigDecimal importe;
 
     @Column(name = "fecha_pago")
     private LocalDateTime fechaPago;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private String estado;
+    private EstadoPago estado = EstadoPago.PENDIENTE;
 
-    // Pedido 1 --- 1 Pago (lado dueño)
-    @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_pedido", nullable = false, unique = true)
+    @Column(name = "referencia_operacion", length = 100)
+    private String referenciaOperacion;
+
+    // Pedido 1 --- 1..* Pago (lado dueño; FK sin restricción única)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "id_pedido", nullable = false)
     private Pedido pedido;
 
-    // Pago 1 --- 1 Comprobante (lado inverso)
+    // Pago 1 --- 0..1 Comprobante (lado inverso)
     @OneToOne(mappedBy = "pago", cascade = CascadeType.ALL)
     private Comprobante comprobante;
 

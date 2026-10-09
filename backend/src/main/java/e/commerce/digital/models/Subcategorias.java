@@ -1,7 +1,6 @@
 package e.commerce.digital.models;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -13,9 +12,9 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
 @Table(name = "subcategorias")
 public class Subcategorias {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long idSubcategoria;
@@ -26,12 +25,15 @@ public class Subcategorias {
     @Column(length = 500)
     private String descripcion;
 
-    // Subcategoria *** 1 Categoria (lado dueño)
+    @Column(nullable = false)
+    private Boolean activo = true;
+
+    // Subcategoria *--- 1 Categoria (lado dueño)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_categoria", nullable = false)
     private Categoria categoria;
 
     // Subcategoria 1 --- 0..* Producto (lado inverso, sin cascade)
-    @OneToMany(mappedBy = "subcategoria")
+    @OneToMany(mappedBy = "subcategorias")
     private List<Producto> productos = new ArrayList<>();
 }

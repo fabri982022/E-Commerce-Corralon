@@ -1,7 +1,7 @@
 package e.commerce.digital.models;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
+import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,26 +12,28 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Table(name = "carrito_items")
+@Table(name = "carrito_items",
+        uniqueConstraints = @UniqueConstraint(columnNames = {"id_carrito", "id_producto"}))
 public class CarritoItem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long idItem;
+    private Long idCarritoItem;
 
+    @Positive
     @Column(nullable = false)
     private Integer cantidad;
 
+    // Precio unitario de referencia al agregar el producto
     @Column(name = "precio_unitario", nullable = false, precision = 12, scale = 2)
     private BigDecimal precioUnitario;
 
-    // Lado dueño: CarritoItem *** 1 Carrito
+    // CarritoItem *--- 1 Carrito (lado dueño)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_carrito", nullable = false)
     private Carrito carrito;
 
-    // CarritoItem *** 1 Producto (sin cascade: el producto existe por sí solo)
+    // CarritoItem *--- 1 Producto (sin cascade)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_producto", nullable = false)
     private Producto producto;
