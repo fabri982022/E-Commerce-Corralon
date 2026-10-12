@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @NoArgsConstructor
 @Table(name = "subcategorias")
-public class Subcategorias {
+public class Subcategoria {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +34,6 @@ public class Subcategorias {
     private Categoria categoria;
 
     // Subcategoria 1 --- 0..* Producto (lado inverso, sin cascade)
-    @OneToMany(mappedBy = "subcategorias")
+    @OneToMany(mappedBy = "subcategoria")
     private List<Producto> productos = new ArrayList<>();
 }

@@ -33,8 +33,12 @@ public class Producto {
     @Column(nullable = false)
     private Integer stock;
 
-    @Column(name = "imagen_url", length = 255)
+    @Column(name = "imagen_url", length = 500)
     private String imagenUrl;
+
+    // Identificador en Cloudinary, necesario para reemplazar o borrar la imagen
+    @Column(name = "imagen_public_id", length = 255)
+    private String imagenPublicId;
 
     @Column(nullable = false)
     private Boolean activo = true;
@@ -42,5 +46,5 @@ public class Producto {
     // Producto *--- 1 Subcategoria (sin cascade)
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_subcategoria", nullable = false)
-    private Subcategorias subcategoria;
+    private Subcategoria subcategoria;
 }

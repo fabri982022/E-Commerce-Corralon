@@ -30,5 +30,5 @@ public class Categoria {
 
     // Categoria 1 --- 0..* Subcategoria (lado inverso, sin cascade)
     @OneToMany(mappedBy = "categoria")
-    private List<Subcategorias> subcategorias = new ArrayList<>();
+    private List<Subcategoria> subcategorias = new ArrayList<>();
 }

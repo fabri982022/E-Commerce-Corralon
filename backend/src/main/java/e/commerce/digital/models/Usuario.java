@@ -41,6 +41,14 @@ public abstract class Usuario {
     @Column(length = 255)
     private String direccion;
 
+    // URL pública de la imagen de perfil (Cloudinary); la imagen no se guarda en la BD
+    @Column(name = "foto_url", length = 500)
+    private String fotoUrl;
+
+    // Identificador en Cloudinary, necesario para reemplazar o borrar la imagen
+    @Column(name = "foto_public_id", length = 255)
+    private String fotoPublicId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private Rol rol;
