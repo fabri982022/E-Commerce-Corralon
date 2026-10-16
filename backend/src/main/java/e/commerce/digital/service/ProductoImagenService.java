@@ -5,7 +5,7 @@ import e.commerce.digital.dto.producto.ProductoResponse;
 import e.commerce.digital.mapper.ProductoMapper;
 import e.commerce.digital.models.Producto;
 import e.commerce.digital.repository.ProductoRepository;
-import jakarta.persistence.EntityNotFoundException;
+import e.commerce.digital.exception.RecursoNoEncontradoException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +47,6 @@ public class ProductoImagenService {
 
     private Producto buscar(Long idProducto) {
         return productoRepository.findById(idProducto)
-                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado"));
     }
 }

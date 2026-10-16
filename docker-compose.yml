@@ -1,0 +1,90 @@
+# Ferretería: MySQL + Adminer + backend (Spring Boot, Java 25) + frontend (opcional).
+#
+#   Levantar base de datos, Adminer y backend:   docker compose up -d --build
+#   Agregar también el frontend:                 docker compose --profile frontend up -d --build
+#   Ver logs del backend:                        docker compose logs -f backend
+#   Detener (conserva los datos):                docker compose down
+#   Detener y BORRAR los datos de MySQL:         docker compose down -v
+
+name: ferreteria
+
+services:
+
+  # ---------- Base de datos ----------
+  mysql:
+    image: mysql:8.4
+    container_name: ferreteria-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-ferreteria}
+      MYSQL_USER: ${DB_USER:-ferreteria_user}          # no puede ser "root": la imagen lo prohíbe
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en el archivo .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:?Defina DB_ROOT_PASSWORD en el archivo .env}
+      TZ: ${TZ:-America/Argentina/Jujuy}
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    ports:
+      # Solo accesible desde esta computadora; 3307 evita chocar con un MySQL local en el 3306
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql                       # los datos sobreviven a down y a reconstruir imágenes
+    healthcheck:
+      # Por TCP (127.0.0.1): durante la inicialización MySQL solo escucha por socket, así no se marca sano antes de tiempo
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  # ---------- Administrador de base de datos ----------
+  adminer:
+    image: adminer:5
+    container_name: ferreteria-adminer
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql                     # el servidor ya aparece cargado en el login
+    ports:
+      - "127.0.0.1:${ADMINER_PORT:-8081}:8080"
+
+  # ---------- Backend (Spring Boot 4, Java 25) ----------
+  backend:
+    build:
+      context: ./backend
+    image: ferreteria-backend
+    container_name: ferreteria-backend
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DB_HOST: mysql                                    # nombre del servicio en la red de Docker
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-ferreteria}
+      DB_USER: ${DB_USER:-ferreteria_user}
+      DB_PASSWORD: ${DB_PASSWORD:?Defina DB_PASSWORD en el archivo .env}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: ${JPA_DDL_AUTO:-update}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      TZ: ${TZ:-America/Argentina/Jujuy}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+
+  # ---------- Frontend (React + nginx), opcional: se activa con --profile frontend ----------
+  frontend:
+    profiles: ["frontend"]
+    build:
+      context: ./frontend
+    image: ferreteria-frontend
+    container_name: ferreteria-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+
+volumes:
+  mysql_data:
+    name: ferreteria_mysql_data

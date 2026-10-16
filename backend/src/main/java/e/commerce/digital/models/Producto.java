@@ -47,4 +47,12 @@ public class Producto {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "id_subcategoria", nullable = false)
     private Subcategoria subcategoria;
+
+    // Disponible para la venta: el producto, su subcategoría y su categoría están activos
+    public boolean estaDisponible() {
+        return Boolean.TRUE.equals(activo)
+                && subcategoria != null
+                && Boolean.TRUE.equals(subcategoria.getActivo())
+                && Boolean.TRUE.equals(subcategoria.getCategoria().getActivo());
+    }
 }

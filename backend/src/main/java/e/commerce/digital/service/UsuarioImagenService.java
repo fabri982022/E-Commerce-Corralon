@@ -5,7 +5,7 @@ import e.commerce.digital.dto.usuario.UsuarioResponse;
 import e.commerce.digital.mapper.UsuarioMapper;
 import e.commerce.digital.models.Usuario;
 import e.commerce.digital.repository.UsuarioRepository;
-import jakarta.persistence.EntityNotFoundException;
+import e.commerce.digital.exception.RecursoNoEncontradoException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,6 +47,6 @@ public class UsuarioImagenService {
 
     private Usuario buscar(String email) {
         return usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario no encontrado"));
     }
 }

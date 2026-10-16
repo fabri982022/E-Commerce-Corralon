@@ -43,8 +43,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     boolean existsBySubcategoria_IdSubcategoria(Long idSubcategoria);
 
     /**
-     * Opción A para stock: bloqueo pesimista al confirmar un pedido.
-     * Se piden todos los productos juntos y ordenados por id para evitar deadlocks.
+     * Opción A para stock (NO usada por PedidoService): bloqueo pesimista.
+     * Riesgo: si el producto ya estaba cargado en la sesión, Hibernate conserva el stock viejo
+     * aunque se obtenga el bloqueo; por eso el pedido usa descontarStock (opción B).
      * Debe llamarse dentro de una transacción.
      */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -56,10 +57,13 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     Optional<Producto> findByIdForUpdate(@Param("id") Long id);
 
     /**
-     * Opción B para stock: descuento atómico en una sola sentencia.
+     * Opción B para stock (la que usa PedidoService): descuento atómico en una sola sentencia.
+     * No limpia el contexto de persistencia (clearAutomatically=false) para no desvincular el carrito
+     * ni el pedido en construcción; el stock de las entidades ya cargadas queda desactualizado,
+     * pero no se escribe de vuelta porque esas entidades no se modifican.
      * Devuelve 1 si había stock suficiente y 0 si no (el service lanza StockInsuficienteException).
      */
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("""
             UPDATE Producto p SET p.stock = p.stock - :cantidad
             WHERE p.idProducto = :id AND p.stock >= :cantidad AND p.activo = true
@@ -67,7 +71,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
     int descontarStock(@Param("id") Long id, @Param("cantidad") int cantidad);
 
     // Reposición al cancelar un pedido
-    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Modifying(flushAutomatically = true)
     @Query("UPDATE Producto p SET p.stock = p.stock + :cantidad WHERE p.idProducto = :id")
     int reponerStock(@Param("id") Long id, @Param("cantidad") int cantidad);
 }

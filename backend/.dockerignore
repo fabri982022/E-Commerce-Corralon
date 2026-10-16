@@ -1,0 +1,17 @@
+target/
+.idea/
+.vscode/
+.git/
+.gitignore
+.gitattributes
+
+# Secretos: nunca deben quedar dentro de la imagen
+.env
+.env.*
+
+# No hace falta en la imagen
+compose.yaml
+docker-compose.yml
+Dockerfile
+HELP.md
+*.md
