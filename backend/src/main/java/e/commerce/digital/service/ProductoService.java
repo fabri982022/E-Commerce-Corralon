@@ -62,10 +62,7 @@ public class ProductoService {
 
     // ----- Catálogo público -----
 
-    /**
-     * Un producto desactivado (o de una subcategoría o categoría inactiva) responde
-     * como inexistente.
-     */
+    /** Un producto desactivado (o de una subcategoría o categoría inactiva) responde como inexistente. */
     public ProductoResponse obtenerPublico(Long idProducto) {
         Producto producto = buscar(idProducto);
         if (!producto.estaDisponible()) {
@@ -80,8 +77,7 @@ public class ProductoService {
 
     // ----- Auxiliares -----
 
-    private PageResponse<ProductoResponse> buscar(ProductoFiltroRequest filtro, boolean soloActivos,
-            Pageable pageable) {
+    private PageResponse<ProductoResponse> buscar(ProductoFiltroRequest filtro, boolean soloActivos, Pageable pageable) {
         String texto = null;
         Long idCategoria = null;
         Long idSubcategoria = null;

@@ -22,10 +22,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Un pago siempre nace PENDIENTE: el cliente informar que pagó nunca lo
- * aprueba.
- * Solo un administrador (o, a futuro, el proveedor de pagos) puede aprobar,
- * rechazar o reembolsar.
+ * Un pago siempre nace PENDIENTE: el cliente informar que pagó nunca lo aprueba.
+ * Solo un administrador (o, a futuro, el proveedor de pagos) puede aprobar, rechazar o reembolsar.
  */
 @Service
 @RequiredArgsConstructor
@@ -39,10 +37,7 @@ public class PagoService {
 
     // ----- Registro -----
 
-    /**
-     * El cliente registra un pago sobre su propio pedido (por ejemplo, informa una
-     * transferencia).
-     */
+    /** El cliente registra un pago sobre su propio pedido (por ejemplo, informa una transferencia). */
     @Transactional
     public PagoResponse registrarComoCliente(String email, Long idPedido, PagoRequest req) {
         Pedido pedido = pedidoRepository.findByIdPedidoAndUsuario_Email(idPedido, email)
@@ -78,14 +73,10 @@ public class PagoService {
     // ----- Cambio de estado (administrador) -----
 
     /**
-     * PENDIENTE pasa a APROBADO o RECHAZADO; APROBADO pasa a REEMBOLSADO. Cualquier
-     * otro caso es
-     * un pago ya procesado. Al aprobar: se registra la fecha, se emite el
-     * comprobante interno y,
-     * si los pagos aprobados cubren el total, el pedido pasa de PENDIENTE a
-     * CONFIRMADO.
-     * Un reembolso no repone stock ni cambia el estado del pedido: lo resuelve el
-     * administrador.
+     * PENDIENTE pasa a APROBADO o RECHAZADO; APROBADO pasa a REEMBOLSADO. Cualquier otro caso es
+     * un pago ya procesado. Al aprobar: se registra la fecha, se emite el comprobante interno y,
+     * si los pagos aprobados cubren el total, el pedido pasa de PENDIENTE a CONFIRMADO.
+     * Un reembolso no repone stock ni cambia el estado del pedido: lo resuelve el administrador.
      */
     @Transactional
     public PagoResponse cambiarEstado(Long idPago, CambioEstadoPagoRequest req) {

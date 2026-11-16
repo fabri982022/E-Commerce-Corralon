@@ -61,10 +61,7 @@ public class SubcategoriaService {
         return subcategoriaMapper.toResponse(buscar(idSubcategoria));
     }
 
-    /**
-     * soloActivas = true para el catálogo público; false para el panel
-     * administrativo.
-     */
+    /** soloActivas = true para el catálogo público; false para el panel administrativo. */
     public List<SubcategoriaResponse> listarPorCategoria(Long idCategoria, boolean soloActivas) {
         buscarCategoria(idCategoria); // 404 si la categoría no existe
         List<Subcategoria> lista = soloActivas

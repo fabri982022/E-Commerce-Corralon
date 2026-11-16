@@ -24,10 +24,8 @@ public class ComprobanteService {
     private final ComprobanteMapper comprobanteMapper;
 
     /**
-     * Emite el comprobante de un pago aprobado. Lo llama PagoService dentro de su
-     * transacción.
-     * El número se deriva del id del pago (único, sin carreras y sin huecos en la
-     * numeración).
+     * Emite el comprobante de un pago aprobado. Lo llama PagoService dentro de su transacción.
+     * El número se deriva del id del pago (único, sin carreras y sin huecos en la numeración).
      * Si el pago ya tiene comprobante, lo devuelve sin crear otro.
      */
     @Transactional

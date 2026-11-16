@@ -45,10 +45,7 @@ public class CategoriaService {
         return categoriaMapper.toResponse(categoria);
     }
 
-    /**
-     * Activar o desactivar. Los productos de una categoría inactiva dejan de
-     * aparecer en el catálogo público.
-     */
+    /** Activar o desactivar. Los productos de una categoría inactiva dejan de aparecer en el catálogo público. */
     @Transactional
     public CategoriaResponse cambiarEstado(Long idCategoria, boolean activo) {
         Categoria categoria = buscar(idCategoria);

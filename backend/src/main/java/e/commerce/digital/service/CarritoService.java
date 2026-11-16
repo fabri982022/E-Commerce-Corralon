@@ -19,8 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Todas las operaciones reciben el email del usuario autenticado (nunca un id
- * del cliente),
+ * Todas las operaciones reciben el email del usuario autenticado (nunca un id del cliente),
  * por lo que un cliente solo puede tocar su propio carrito.
  */
 @Service
@@ -37,10 +36,7 @@ public class CarritoService {
         return carritoMapper.toResponse(obtenerOCrear(email));
     }
 
-    /**
-     * Agrega un producto; si ya está en el carrito, suma la cantidad. Verifica
-     * disponibilidad y stock.
-     */
+    /** Agrega un producto; si ya está en el carrito, suma la cantidad. Verifica disponibilidad y stock. */
     public CarritoResponse agregarProducto(String email, CarritoItemRequest req) {
         Carrito carrito = obtenerOCrear(email);
         Producto producto = productoRepository.findById(req.idProducto())
@@ -92,8 +88,7 @@ public class CarritoService {
                 .orElseThrow(() -> new RecursoNoEncontradoException("Carrito no encontrado"));
     }
 
-    // Normalmente el carrito se crea al registrarse; esto cubre clientes que aún no
-    // lo tengan
+    // Normalmente el carrito se crea al registrarse; esto cubre clientes que aún no lo tengan
     private Carrito obtenerOCrear(String email) {
         return carritoRepository.findByUsuario_Email(email).orElseGet(() -> {
             UsuarioCliente cliente = usuarioClienteRepository.findByEmail(email)

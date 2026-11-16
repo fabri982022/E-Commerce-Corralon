@@ -43,10 +43,7 @@ public class UsuarioService {
         return usuarioMapper.toResponse(usuarioRepository.save(cliente));
     }
 
-    /**
-     * Alta hecha por un administrador: crea un cliente o un administrador según el
-     * rol.
-     */
+    /** Alta hecha por un administrador: crea un cliente o un administrador según el rol. */
     @Transactional
     public UsuarioResponse crearPorAdmin(UsuarioAdminRequest req) {
         String email = normalizar(req.email());
@@ -85,10 +82,7 @@ public class UsuarioService {
         return usuarioMapper.toResponse(buscarPorId(idUsuario));
     }
 
-    /**
-     * Activa o desactiva un usuario. Un administrador no puede desactivar su propia
-     * cuenta.
-     */
+    /** Activa o desactiva un usuario. Un administrador no puede desactivar su propia cuenta. */
     @Transactional
     public UsuarioResponse cambiarEstado(Long idUsuario, UsuarioEstadoRequest req, String emailAdminActual) {
         Usuario usuario = buscarPorId(idUsuario);
@@ -101,8 +95,7 @@ public class UsuarioService {
 
     // ----- Auxiliares -----
 
-    // Un cliente nace con su carrito; la relación tiene cascade desde
-    // UsuarioCliente
+    // Un cliente nace con su carrito; la relación tiene cascade desde UsuarioCliente
     private void asignarCarrito(UsuarioCliente cliente) {
         Carrito carrito = new Carrito();
         carrito.setUsuario(cliente);
@@ -115,8 +108,7 @@ public class UsuarioService {
         }
     }
 
-    // El email se guarda en minúsculas y sin espacios para que la unicidad no
-    // dependa de mayúsculas
+    // El email se guarda en minúsculas y sin espacios para que la unicidad no dependa de mayúsculas
     private String normalizar(String email) {
         return email.trim().toLowerCase();
     }

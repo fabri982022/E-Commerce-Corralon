@@ -44,8 +44,7 @@ import static e.commerce.digital.util.enumerated.EstadoPedido.*;
 @Transactional(readOnly = true)
 public class PedidoService {
 
-    // Transiciones permitidas; ENTREGADO y CANCELADO son estados finales (no
-    // figuran como origen)
+    // Transiciones permitidas; ENTREGADO y CANCELADO son estados finales (no figuran como origen)
     private static final Map<EstadoPedido, Set<EstadoPedido>> TRANSICIONES = Map.of(
             PENDIENTE, Set.of(CONFIRMADO, CANCELADO),
             CONFIRMADO, Set.of(EN_PREPARACION, CANCELADO),
@@ -62,12 +61,9 @@ public class PedidoService {
     // ----- Cliente -----
 
     /**
-     * Convierte el carrito del cliente autenticado en un pedido, en una sola
-     * transacción:
-     * revalida disponibilidad, descuenta stock de forma atómica, copia los precios
-     * vigentes,
-     * calcula el total en el servidor y vacía el carrito. Si algo falla, se
-     * revierten todas las operaciones.
+     * Convierte el carrito del cliente autenticado en un pedido, en una sola transacción:
+     * revalida disponibilidad, descuenta stock de forma atómica, copia los precios vigentes,
+     * calcula el total en el servidor y vacía el carrito. Si algo falla, se revierten todas las operaciones.
      */
     @Transactional
     public PedidoResponse confirmar(String email, PedidoRequest req) {
@@ -85,8 +81,7 @@ public class PedidoService {
 
         Pedido pedido = pedidoMapper.toEntity(cliente, req);
 
-        // Se procesa en orden de producto para que pedidos simultáneos no se bloqueen
-        // entre sí (deadlock)
+        // Se procesa en orden de producto para que pedidos simultáneos no se bloqueen entre sí (deadlock)
         List<CarritoItem> items = carrito.getItems().stream()
                 .sorted(Comparator.comparing(i -> i.getProducto().getIdProducto()))
                 .toList();
@@ -96,13 +91,11 @@ public class PedidoService {
             if (!producto.estaDisponible()) {
                 throw new ProductoNoDisponibleException(producto.getNombre());
             }
-            // UPDATE atómico: descuenta solo si hay stock suficiente (devuelve 0 filas si
-            // no)
+            // UPDATE atómico: descuenta solo si hay stock suficiente (devuelve 0 filas si no)
             if (productoRepository.descontarStock(producto.getIdProducto(), item.getCantidad()) == 0) {
                 throw new StockInsuficienteException(producto.getNombre());
             }
-            // El detalle copia el precio vigente del producto, no el de referencia del
-            // carrito
+            // El detalle copia el precio vigente del producto, no el de referencia del carrito
             pedido.agregarDetalle(pedidoMapper.toDetalle(item));
         }
 
@@ -116,9 +109,7 @@ public class PedidoService {
                 .map(pedidoMapper::toResumen));
     }
 
-    /**
-     * Si el pedido no existe o es de otro usuario, responde igual: no encontrado.
-     */
+    /** Si el pedido no existe o es de otro usuario, responde igual: no encontrado. */
     public PedidoResponse obtenerMio(String email, Long idPedido) {
         Pedido pedido = pedidoRepository.findByIdPedidoAndUsuario_Email(idPedido, email)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Pedido no encontrado"));
