@@ -3,10 +3,10 @@ package e.commerce.digital.exception;
 import e.commerce.digital.dto.common.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -22,6 +22,11 @@ import java.util.List;
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> autenticacionInvalida(AuthenticationException ex) {
+        return responder(HttpStatus.UNAUTHORIZED, "Correo o contraseña incorrectos");
+    }
 
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ResponseEntity<ErrorResponse> noEncontrado(RecursoNoEncontradoException ex) {
@@ -66,12 +71,6 @@ public class GlobalExceptionHandler {
         return responder(HttpStatus.BAD_REQUEST, "El valor del parámetro '" + ex.getName() + "' no es válido");
     }
 
-    // ?sort=campoQueNoExiste
-    @ExceptionHandler(PropertyReferenceException.class)
-    public ResponseEntity<ErrorResponse> ordenamientoInvalido(PropertyReferenceException ex) {
-        return responder(HttpStatus.BAD_REQUEST, "No se puede ordenar por el campo '" + ex.getPropertyName() + "'");
-    }
-
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<ErrorResponse> archivoDemasiadoGrande(MaxUploadSizeExceededException ex) {
         return responder(HttpStatus.PAYLOAD_TOO_LARGE, "El archivo supera el tamaño máximo permitido (5 MB)");
@@ -81,7 +80,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> integridad(DataIntegrityViolationException ex) {
         log.warn("Violación de integridad de datos", ex);
-        return responder(HttpStatus.CONFLICT, "La operación viola una restricción de los datos (por ejemplo, un valor duplicado)");
+        return responder(HttpStatus.CONFLICT,
+                "La operación viola una restricción de los datos (por ejemplo, un valor duplicado)");
     }
 
     private ResponseEntity<ErrorResponse> responder(HttpStatus status, String mensaje) {

@@ -1,21 +1,25 @@
 # Ferretería Digital
 
-Backend de una plataforma de comercio electrónico para una ferretería o corralón. El proyecto modela el catálogo de productos, la gestión de usuarios, el carrito de compras, los pedidos, los pagos, los comprobantes y la carga de imágenes.
+Plataforma de comercio electrónico para una ferretería o corralón. Incluye una tienda responsiva en React y una API Spring Boot para catálogo, usuarios, carrito, pedidos, pagos, comprobantes e imágenes.
 
 La aplicación está organizada como un backend Java con Spring Boot y una persistencia relacional en MySQL. La lógica de negocio se concentra en servicios independientes, con repositorios JPA, DTOs de entrada/salida, mappers y excepciones de dominio.
 
 ## Estado actual
 
-El proyecto se encuentra en una etapa funcional de backend y validación de la lógica de negocio:
+La aplicación cuenta con una experiencia de compra de punta a punta y una API con reglas de negocio:
 
 - El dominio y el modelo de datos principal están definidos como entidades JPA.
 - Las operaciones de usuarios, catálogo, carrito, pedidos, pagos, comprobantes e imágenes están implementadas en la capa de servicios.
 - La integración de imágenes utiliza Cloudinary.
 - La gestión de imágenes tiene controladores REST disponibles.
+- La tienda React permite buscar productos, explorar categorías, registrarse, iniciar sesión, gestionar el carrito y confirmar pedidos.
+- La autenticación utiliza JWT firmado con HS256, transportado en una cookie `HttpOnly`; las APIs validan los roles en el servidor.
+- Los controladores y servicios registran inicio, resultado, duración y errores sin escribir argumentos, cuerpos, credenciales ni tokens en los logs.
+- Cada solicitud HTTP recibe un `X-Request-ID`, incluido en los logs para correlacionar el recorrido por filtros, controladores y servicios.
+- Las rutas de carrito y compra requieren un cliente autenticado y carrito no vacío; los recursos administrativos requieren el rol `ADMIN`.
+- Docker Compose crea de manera idempotente dos administradores y dos clientes iniciales en MySQL con contraseñas BCrypt.
 - La lógica de negocio cuenta con pruebas unitarias de servicios usando JUnit 5, Mockito y AssertJ.
-- La configuración de Docker Compose contempla MySQL, Adminer, backend y un frontend opcional.
-
-> Importante: actualmente los controladores REST visibles en el backend están concentrados en la gestión de imágenes. Las operaciones de usuarios, catálogo, carrito, pedidos, pagos y comprobantes están implementadas y probadas principalmente en la capa de servicios; la exposición completa de esos casos de uso mediante controladores REST es una etapa posterior de integración.
+- Docker Compose levanta MySQL, Adminer, backend y frontend juntos de forma predeterminada.
 
 ## Objetivo del proyecto
 
@@ -95,7 +99,7 @@ La carga y eliminación de imágenes se delega a Cloudinary. El flujo contempla:
 
 Se agregaron pruebas unitarias para la lógica de servicios. Las pruebas utilizan mocks para repositorios y servicios externos, por lo que no dependen de una base de datos real ni de Cloudinary para validar las reglas principales.
 
-En los resultados Maven disponibles en `backend/target/surefire-reports` se registran **160 pruebas ejecutadas, sin fallos ni errores**.
+En los resultados Maven disponibles en `backend/target/surefire-reports` se registran **168 pruebas ejecutadas, sin fallos ni errores**.
 
 ### 6. Preparación para ejecución local y contenedores
 
@@ -107,7 +111,29 @@ Se configuraron:
 - Adminer para inspección de la base de datos.
 - Dockerfile multi-etapa para el backend.
 - Docker Compose para levantar el entorno completo.
-- Nginx como proxy del frontend opcional.
+- Nginx como proxy del frontend.
+
+### Ejecutar el frontend en desarrollo
+
+Con el backend disponible en `http://localhost:8080`, ejecutá:
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Vite queda disponible en `http://localhost:5173` y reenvía `/api` al backend. Para otro host, definí `VITE_BACKEND_URL` antes de iniciar Vite. La compilación de producción usa `VITE_API_BASE_URL` (por defecto `/api`); el contenedor Nginx ya reenvía ese prefijo al servicio `backend`.
+
+Docker Compose también levanta el frontend junto con la base de datos y el backend; no hace falta activar perfiles. Antes del primer inicio, completá en `.env` la clave JWT y las cuatro contraseñas iniciales. Las cuentas son `admin1@corralon.local`, `admin2@corralon.local`, `cliente1@corralon.local` y `cliente2@corralon.local`; consultá sus contraseñas en las variables `SEED_*_PASSWORD` de tu `.env` local. Las contraseñas deben ser distintas, tener entre 8 y 72 bytes y no se guardan en el repositorio:
+
+```powershell
+docker compose up -d --build
+```
+
+La tienda queda disponible en `http://localhost:3000` (o en el puerto configurado por `FRONTEND_PORT`). El inicio de sesión usa un JWT en una cookie `HttpOnly`; el navegador y la API se sirven desde el mismo origen mediante Nginx.
+
+La referencia de endpoints, parámetros y cuerpos JSON está en [API & Service Communication Contracts](./.github/modernize/assessment/engines/facts/api-service-contracts.md), incluyendo los roles requeridos y los usuarios de prueba.
 
 ## Funcionalidades por área
 
@@ -219,7 +245,8 @@ El `PUT` recibe un formulario `multipart/form-data` con el campo `archivo` y req
 │           └── service
 ├── frontend
 │   ├── Dockerfile
-│   └── nginx.conf
+│   ├── nginx.conf
+│   └── package.json
 ├── docker-compose.yml
 ├── .env.example
 └── README.md
@@ -254,7 +281,7 @@ El `PUT` recibe un formulario `multipart/form-data` con el campo `archivo` y req
 - MySQL 8.4.
 - Adminer.
 - Eclipse Temurin JDK/JRE 25.
-- Nginx para el frontend opcional.
+- Nginx para servir el frontend y reenviar las solicitudes a la API.
 
 ## Requisitos previos
 
@@ -293,7 +320,7 @@ Variables disponibles:
 | `DB_USER` | Usuario de MySQL | `ferreteria_user` |
 | `DB_PASSWORD` | Contraseña del usuario de MySQL | Obligatoria con Docker Compose |
 | `DB_ROOT_PASSWORD` | Contraseña root de MySQL | Obligatoria con Docker Compose |
-| `MYSQL_HOST_PORT` | Puerto local publicado por MySQL | `3307` |
+| `MYSQL_HOST_PORT` | Puerto local publicado por MySQL | `3308` |
 | `ADMINER_PORT` | Puerto local de Adminer | `8081` |
 | `BACKEND_PORT` | Puerto local del backend | `8080` |
 | `FRONTEND_PORT` | Puerto local del frontend | `3000` |
@@ -302,6 +329,13 @@ Variables disponibles:
 | `CLOUDINARY_API_KEY` | API key de Cloudinary | Vacío si no se usa |
 | `CLOUDINARY_API_SECRET` | API secret de Cloudinary | Vacío si no se usa |
 | `TZ` | Zona horaria de la aplicación | `America/Argentina/Jujuy` |
+| `JWT_SECRET` | Clave de firma JWT en Base64 (mínimo 32 bytes) | Obligatoria con Docker Compose |
+| `JWT_EXPIRATION_MINUTES` | Duración de cada JWT | `60` |
+| `AUTH_COOKIE_SECURE` | Restringe la cookie a HTTPS | `false` en localhost; `true` en producción |
+| `SEED_ADMIN1_EMAIL/PASSWORD` | Credenciales de la primera cuenta ADMIN | Definir en `.env` |
+| `SEED_ADMIN2_EMAIL/PASSWORD` | Credenciales de la segunda cuenta ADMIN | Definir en `.env` |
+| `SEED_CLIENT1_EMAIL/PASSWORD` | Credenciales de la primera cuenta CLIENTE | Definir en `.env` |
+| `SEED_CLIENT2_EMAIL/PASSWORD` | Credenciales de la segunda cuenta CLIENTE | Definir en `.env` |
 
 No subir `.env` al repositorio ni colocar credenciales reales en el README.
 
@@ -341,17 +375,12 @@ Este comando levanta:
 
 | Servicio | Dirección |
 |---|---|
-| MySQL | `localhost:3307` |
+| MySQL | `localhost:3308` |
 | Adminer | `http://localhost:8081` |
 | Backend | `http://localhost:8080` |
+| MySQL (host) | `localhost:3308` |
 
-Para incluir también el frontend opcional:
-
-```powershell
-docker compose --profile frontend up -d --build
-```
-
-El frontend, si está preparado, queda disponible en:
+El frontend queda disponible en:
 
 ```text
 http://localhost:3000

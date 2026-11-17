@@ -1,7 +1,7 @@
-# Ferretería: MySQL + Adminer + backend (Spring Boot, Java 25) + frontend (opcional).
+# Ferretería: MySQL + Adminer + backend (Spring Boot, Java 25) + frontend (React + Nginx).
 #
-#   Levantar base de datos, Adminer y backend:   docker compose up -d --build
-#   Agregar también el frontend:                 docker compose --profile frontend up -d --build
+#   Levantar todos los servicios:                docker compose up -d --build
+#   Ver la tienda:                               http://localhost:3000
 #   Ver logs del backend:                        docker compose logs -f backend
 #   Detener (conserva los datos):                docker compose down
 #   Detener y BORRAR los datos de MySQL:         docker compose down -v
@@ -23,8 +23,8 @@ services:
       TZ: ${TZ:-America/Argentina/Jujuy}
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     ports:
-      # Solo accesible desde esta computadora; 3307 evita chocar con un MySQL local en el 3306
-      - "127.0.0.1:${MYSQL_HOST_PORT:-3307}:3306"
+      # Solo accesible desde esta computadora; usa 3308 para evitar conflictos con 3306/3307
+      - "127.0.0.1:${MYSQL_HOST_PORT:-3308}:3306"
     volumes:
       - mysql_data:/var/lib/mysql                       # los datos sobreviven a down y a reconstruir imágenes
     healthcheck:
@@ -68,20 +68,32 @@ services:
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET en el archivo .env}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES:-60}
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+      SEED_USERS_ENABLED: ${SEED_USERS_ENABLED:-true}
+      APP_SEED_ADMIN1_EMAIL: ${SEED_ADMIN1_EMAIL:-admin1@corralon.local}
+      APP_SEED_ADMIN1_PASSWORD: ${SEED_ADMIN1_PASSWORD:-}
+      APP_SEED_ADMIN2_EMAIL: ${SEED_ADMIN2_EMAIL:-admin2@corralon.local}
+      APP_SEED_ADMIN2_PASSWORD: ${SEED_ADMIN2_PASSWORD:-}
+      APP_SEED_CLIENT1_EMAIL: ${SEED_CLIENT1_EMAIL:-cliente1@corralon.local}
+      APP_SEED_CLIENT1_PASSWORD: ${SEED_CLIENT1_PASSWORD:-}
+      APP_SEED_CLIENT2_EMAIL: ${SEED_CLIENT2_EMAIL:-cliente2@corralon.local}
+      APP_SEED_CLIENT2_PASSWORD: ${SEED_CLIENT2_PASSWORD:-}
       TZ: ${TZ:-America/Argentina/Jujuy}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
 
-  # ---------- Frontend (React + nginx), opcional: se activa con --profile frontend ----------
+  # ---------- Frontend (React + nginx) ----------
   frontend:
-    profiles: ["frontend"]
     build:
       context: ./frontend
     image: ferreteria-frontend
     container_name: ferreteria-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_started
     ports:
       - "${FRONTEND_PORT:-3000}:80"
 
