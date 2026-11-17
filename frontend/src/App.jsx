@@ -384,6 +384,7 @@ function AuthPage() {
       <div className="auth-card">
         <div className="auth-icon"><i className="bi bi-person-lock" /></div>
         <h1>¡Qué bueno verte!</h1><p>Ingresá a tu cuenta para continuar con tu proyecto.</p>
+        {location.state?.notice && <div className="alert alert-success" role="status">{location.state.notice}</div>}
         <ErrorBanner message={error} />
         <form onSubmit={submit} className="auth-form">
           <label htmlFor="email">Correo electrónico</label>
@@ -450,7 +451,6 @@ function VendorRegisterPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
-  const notify = useNotify();
 
   const onChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
   const submit = async (event) => {
@@ -459,8 +459,10 @@ function VendorRegisterPage() {
     setError('');
     try {
       await api('/auth/registro-vendedor', { method: 'POST', body: JSON.stringify(form) });
-      notify('Solicitud enviada. Un administrador debe aprobarla antes de que puedas ingresar.');
-      navigate('/ingresar', { replace: true });
+      navigate('/ingresar', {
+        replace: true,
+        state: { notice: 'Tu solicitud fue enviada y está esperando la aprobación de un administrador. Podrás ingresar cuando la aprueben.' },
+      });
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -651,6 +653,7 @@ function VendorPage() {
   const [categoryId, setCategoryId] = useState('');
   const [image, setImage] = useState(null);
   const [imageInputKey, setImageInputKey] = useState(0);
+  const [editingProductId, setEditingProductId] = useState(null);
   const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', idSubcategoria: '' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -679,7 +682,6 @@ function VendorPage() {
     if (!categoryId) {
       setSubcategories([]);
       setLoadingSubcategories(false);
-      setForm((current) => ({ ...current, idSubcategoria: '' }));
       return;
     }
     let active = true;
@@ -688,7 +690,6 @@ function VendorPage() {
       .then((items) => {
         if (active) {
           setSubcategories(items);
-          setForm((current) => ({ ...current, idSubcategoria: '' }));
         }
       })
       .catch((requestError) => {
@@ -700,36 +701,63 @@ function VendorPage() {
     return () => { active = false; };
   }, [categoryId]);
 
+  const resetForm = () => {
+    setEditingProductId(null);
+    setForm({ nombre: '', descripcion: '', precio: '', stock: '', idSubcategoria: '' });
+    setCategoryId('');
+    setImage(null);
+    setImageInputKey((key) => key + 1);
+    setError('');
+  };
+
+  const editProduct = (product) => {
+    setEditingProductId(product.idProducto);
+    setForm({
+      nombre: product.nombre || '',
+      descripcion: product.descripcion || '',
+      precio: String(product.precio ?? ''),
+      stock: String(product.stock ?? ''),
+      idSubcategoria: String(product.idSubcategoria ?? ''),
+    });
+    setCategoryId(String(product.idCategoria ?? ''));
+    setImage(null);
+    setImageInputKey((key) => key + 1);
+    setError('');
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setSubmitting(true);
     setError('');
     try {
-      const created = await api('/vendedor/productos', {
-        method: 'POST',
-        body: JSON.stringify({
-          ...form,
-          precio: Number(form.precio),
-          stock: Number(form.stock),
-          idSubcategoria: Number(form.idSubcategoria),
-        }),
-      });
+      const editing = editingProductId !== null;
+      const saved = await api(
+        editing ? `/vendedor/productos/${editingProductId}` : '/vendedor/productos',
+        {
+          method: editing ? 'PUT' : 'POST',
+          body: JSON.stringify({
+            ...form,
+            precio: Number(form.precio),
+            stock: Number(form.stock),
+            idSubcategoria: Number(form.idSubcategoria),
+          }),
+        },
+      );
       let imageError = '';
       if (image) {
         const data = new FormData();
         data.append('archivo', image);
         try {
-          await api(`/vendedor/productos/${created.idProducto}/imagen`, { method: 'PUT', body: data });
+          await api(`/vendedor/productos/${saved.idProducto}/imagen`, { method: 'PUT', body: data });
         } catch (requestError) {
-          imageError = `El producto quedó creado, pero no se pudo subir la imagen: ${requestError.message}`;
+          imageError = `Los datos del producto quedaron guardados, pero no se pudo subir la imagen: ${requestError.message}. Podés volver a intentarlo editando la publicación.`;
         }
       }
-      setForm({ nombre: '', descripcion: '', precio: '', stock: '', idSubcategoria: '' });
-      setCategoryId('');
-      setImage(null);
-      setImageInputKey((key) => key + 1);
+      resetForm();
       notify(
-        imageError || 'Producto enviado. Quedará visible en el catálogo cuando un administrador lo apruebe.',
+        imageError || (editing
+          ? 'Cambios guardados. La publicación volverá a quedar pendiente hasta que un administrador la apruebe.'
+          : 'Producto enviado. Quedará visible en el catálogo cuando un administrador lo apruebe.'),
         imageError ? 'danger' : 'success',
       );
       await load();
@@ -748,8 +776,8 @@ function VendorPage() {
       <ErrorBanner message={error} onRetry={load} />
       <div className="seller-layout">
         <form className="seller-form" onSubmit={submit}>
-          <h3><i className="bi bi-plus-circle me-2" />Nuevo producto</h3>
-          <p>Elegí una categoría y completá los datos de tu publicación.</p>
+          <h3><i className={`bi ${editingProductId ? 'bi-pencil-square' : 'bi-plus-circle'} me-2`} />{editingProductId ? 'Editar producto' : 'Nuevo producto'}</h3>
+          <p>{editingProductId ? 'Actualizá los datos de tu publicación. Los cambios requieren aprobación administrativa.' : 'Elegí una categoría y completá los datos de tu publicación.'}</p>
           <label htmlFor="seller-product-name">Nombre del producto</label>
           <input id="seller-product-name" className="form-control" required maxLength={100} value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} />
           <label htmlFor="seller-product-description">Descripción</label>
@@ -759,7 +787,10 @@ function VendorPage() {
             <div><label htmlFor="seller-product-stock">Stock</label><input id="seller-product-stock" type="number" className="form-control" min="0" step="1" required value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} /></div>
           </div>
           <label htmlFor="seller-category">Categoría</label>
-          <select id="seller-category" className="form-select" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+          <select id="seller-category" className="form-select" required value={categoryId} onChange={(event) => {
+            setCategoryId(event.target.value);
+            setForm((current) => ({ ...current, idSubcategoria: '' }));
+          }}>
             <option value="">Seleccioná una categoría</option>
             {categories.map((category) => <option key={category.idCategoria} value={category.idCategoria}>{category.nombre}</option>)}
           </select>
@@ -770,11 +801,23 @@ function VendorPage() {
             {subcategories.map((subcategory) => <option key={subcategory.idSubcategoria} value={subcategory.idSubcategoria}>{subcategory.nombre}</option>)}
           </select>
           {categoryId && !subcategories.length && !loadingSubcategories && <div className="seller-category-help">Esta categoría todavía no tiene subcategorías activas.</div>}
-          <label htmlFor="seller-product-image">Imagen <span className="optional">(opcional)</span></label>
-          <input key={imageInputKey} id="seller-product-image" type="file" className="form-control" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] || null)} />
+          <label htmlFor="seller-product-image">{editingProductId ? 'Cambiar imagen' : 'Imagen'} <span className="optional">(opcional)</span></label>
+          <input key={imageInputKey} id="seller-product-image" type="file" className="form-control" accept="image/jpeg,image/png,image/webp" onChange={(event) => {
+            const selectedImage = event.target.files?.[0] || null;
+            if (selectedImage && selectedImage.size > 5 * 1024 * 1024) {
+              setImage(null);
+              setError('La imagen no puede superar los 5 MB.');
+              setImageInputKey((key) => key + 1);
+              return;
+            }
+            setImage(selectedImage);
+            setError('');
+          }} />
+          {editingProductId && <div className="seller-category-help">Si no seleccionás otra, se conserva la imagen actual.</div>}
           <button type="submit" className="btn btn-primary btn-lg w-100 mt-3" disabled={submitting || !categories.length || !subcategories.length}>
-            {submitting ? 'Enviando producto...' : 'Enviar a revisión'}
+            {submitting ? 'Guardando producto...' : editingProductId ? 'Guardar cambios' : 'Enviar a revisión'}
           </button>
+          {editingProductId && <button type="button" className="btn btn-outline-secondary w-100 mt-2" onClick={resetForm} disabled={submitting}>Cancelar edición</button>}
         </form>
         <section className="seller-products">
           <div className="seller-list-heading"><div><h3>Mis publicaciones</h3><p>Consultá el estado de aprobación de tus productos.</p></div><button className="btn btn-outline-primary btn-sm" onClick={load} disabled={loading}><i className="bi bi-arrow-clockwise me-1" />Actualizar</button></div>
@@ -788,7 +831,12 @@ function VendorPage() {
                     <span>{product.nombreCategoria} · {product.nombreSubcategoria}</span>
                     <span>{formatPrice(product.precio)} · Stock: {product.stock}</span>
                   </div>
-                  <span className={`badge ${product.activo ? 'text-bg-success' : 'text-bg-warning'}`}>{product.activo ? 'Aprobado' : 'Pendiente'}</span>
+                  <div className="seller-product-actions">
+                    <span className={`badge ${product.activo ? 'text-bg-success' : 'text-bg-warning'}`}>{product.activo ? 'Aprobado' : 'Pendiente'}</span>
+                    <button type="button" className="btn btn-outline-primary btn-sm" onClick={() => editProduct(product)} disabled={submitting}>
+                      <i className="bi bi-pencil me-1" />Editar
+                    </button>
+                  </div>
                 </article>
               ))}
             </div>

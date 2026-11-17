@@ -177,6 +177,18 @@ class ImagenServiceTest {
                 .hasCauseInstanceOf(IOException.class);
     }
 
+    @Test
+    @DisplayName("subir: conserva la causa de configuración devuelta por Cloudinary")
+    void subir_fallaConfiguracionCloudinary() throws Exception {
+        when(cloudinary.uploader()).thenReturn(uploader);
+        doThrow(new RuntimeException("Invalid cloud_name commerce")).when(uploader).upload(any(), anyMap());
+
+        assertThatThrownBy(() -> service.subir(archivo("image/png", PNG), "ferreteria/usuarios"))
+                .isInstanceOf(ServicioImagenesException.class)
+                .hasCauseInstanceOf(RuntimeException.class)
+                .hasRootCauseMessage("Invalid cloud_name commerce");
+    }
+
     // =====================  eliminar  =====================
 
     @Test

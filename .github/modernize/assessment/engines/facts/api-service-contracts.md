@@ -145,7 +145,7 @@ Un administrador lo habilita mediante `PATCH /api/admin/usuarios/{idUsuario}/est
 }
 ```
 
-Los vendedores solo pueden consultar y modificar publicaciones propias. Al editar una publicación aprobada, incluida su imagen, vuelve a quedar inactiva para requerir una nueva revisión. Solo se aceptan categorías y subcategorías activas. `ProductoResponse.publicadoPorVendedor` permite al administrador distinguir las publicaciones de vendedor de las creadas desde administración.
+`PUT /api/vendedor/productos/{idProducto}` usa el mismo `ProductoVendedorRequest` que el `POST` anterior. Los vendedores solo pueden consultar y modificar publicaciones propias. Al editar una publicación aprobada, incluida su imagen, vuelve a quedar inactiva para requerir una nueva revisión. Solo se aceptan categorías y subcategorías activas. `ProductoResponse.publicadoPorVendedor` permite al administrador distinguir las publicaciones de vendedor de las creadas desde administración.
 
 `POST /api/auth/login` — `LoginRequest`:
 
@@ -248,6 +248,29 @@ El estado inicial del pago es `PENDIENTE`; el cliente no envía el estado.
 
 Para cambiar imágenes se usa `multipart/form-data` con una parte de archivo llamada `archivo`, no JSON. El límite configurado para el archivo es 5 MB.
 
+### Pruebas de imágenes
+
+Inicie sesión primero para guardar la cookie de autenticación en `cookies.txt`:
+
+```powershell
+curl.exe -i -c cookies.txt -b cookies.txt `
+  -H "Content-Type: application/json" `
+  --data-raw '{"email":"VENDEDOR_EMAIL","password":"CONTRASEÑA"}' `
+  http://localhost:3000/api/auth/login
+```
+
+Edite el producto como JSON con `PUT /api/vendedor/productos/{idProducto}` y el mismo cuerpo `ProductoVendedorRequest` mostrado para la creación. Para subir o reemplazar su imagen, envíe el archivo en la parte multipart `archivo`:
+
+```powershell
+curl.exe -i -b cookies.txt -X PUT `
+  -F "archivo=@C:\ruta\foto.jpg;type=image/jpeg" `
+  http://localhost:3000/api/vendedor/productos/5/imagen
+```
+
+También se puede usar el mismo formato multipart para `PUT /api/admin/productos/{idProducto}/imagen` con una sesión `ADMIN` y para `PUT /api/usuarios/me/foto` con cualquier sesión autenticada. Se aceptan JPEG, PNG y WebP de hasta 5 MB; no envíe JSON ni establezca manualmente el encabezado `Content-Type` al usar `curl -F`.
+
+El backend requiere el valor **Cloud Name** real de la cuenta en `CLOUDINARY_CLOUD_NAME`, junto con `CLOUDINARY_API_KEY` y `CLOUDINARY_API_SECRET` en el `.env` local. El log actual `Invalid cloud_name commerce` confirma que `commerce` no es el Cloud Name válido de la cuenta; reemplácelo por el valor exacto del panel de Cloudinary y recree el backend con `docker compose up -d --force-recreate backend`. No comparta ni registre el API secret.
+
 ### Usuarios, pedidos y pagos administrativos
 
 `POST /api/admin/usuarios` — `UsuarioAdminRequest`:
@@ -302,7 +325,7 @@ Los valores definidos para `EstadoPago` son `PENDIENTE`, `APROBADO`, `RECHAZADO`
 | Frontend | Nginx sirve la SPA y proxifica `/api`; no se configuró endpoint de métricas o estado. | No configuradas. |
 | Adminer | UI disponible en `/` sobre el puerto host 8081. | No configuradas. |
 
-La API agrega el encabezado `X-Request-ID` a cada respuesta y lo incluye en logs correlacionados de filtros, controladores y servicios.
+La API agrega el encabezado `X-Request-ID` a cada respuesta y lo incluye en logs correlacionados de filtros, controladores y servicios. El navegador registra los errores HTTP con método, ruta, status y `X-Request-ID`; nunca registra cookies, tokens ni cuerpos de solicitud. Para seguir el detalle del backend use `docker compose logs -f backend`.
 
 ## DTOs & Contracts
 

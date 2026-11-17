@@ -1,15 +1,17 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 export class ApiError extends Error {
-  constructor(message, status) {
+  constructor(message, status, requestId = null) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.requestId = requestId;
   }
 }
 
 export async function api(path, options = {}) {
   const headers = new Headers(options.headers || {});
+  const method = (options.method || 'GET').toUpperCase();
   if (options.body && !(options.body instanceof FormData)) {
     headers.set('Content-Type', 'application/json');
   }
@@ -21,7 +23,12 @@ export async function api(path, options = {}) {
       headers,
       credentials: 'include',
     });
-  } catch {
+  } catch (cause) {
+    console.error('[api] No se pudo conectar con el servidor', {
+      method,
+      path,
+      cause: cause instanceof Error ? cause.message : String(cause),
+    });
     throw new ApiError('No pudimos conectar con el servidor. Revisá tu conexión e intentá de nuevo.', 0);
   }
 
@@ -36,7 +43,15 @@ export async function api(path, options = {}) {
     const message = typeof data === 'object' && data !== null
       ? data.mensaje || data.message || 'Ocurrió un error al procesar la solicitud.'
       : data || 'Ocurrió un error al procesar la solicitud.';
-    throw new ApiError(message, response.status);
+    const requestId = response.headers.get('X-Request-ID');
+    console.error('[api] Solicitud fallida', {
+      method,
+      path,
+      status: response.status,
+      requestId,
+      message,
+    });
+    throw new ApiError(message, response.status, requestId);
   }
 
   return data;

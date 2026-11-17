@@ -89,7 +89,7 @@ Las reglas importantes, como validación de duplicados, disponibilidad de produc
 
 ### 4. Integración de imágenes
 
-La carga y eliminación de imágenes se delega a Cloudinary. El flujo contempla:
+La carga y eliminación de imágenes se delega a Cloudinary. El backend configura explícitamente el soporte multipart del servlet, con un máximo de 5 MB por archivo y 6 MB por solicitud. El flujo contempla:
 
 - Validación del tamaño máximo de archivos.
 - Generación y almacenamiento de URL y `public_id`.
@@ -353,10 +353,13 @@ Variables disponibles:
 | `AUTH_COOKIE_SECURE` | Restringe la cookie a HTTPS | `false` en localhost; `true` en producción |
 | `SEED_ADMIN1_EMAIL/PASSWORD` | Credenciales de la primera cuenta ADMIN | Definir en `.env` |
 | `SEED_ADMIN2_EMAIL/PASSWORD` | Credenciales de la segunda cuenta ADMIN | Definir en `.env` |
+| `SEED_RESET_ADMIN_PASSWORDS` | Restablece las contraseñas de las cuentas ADMIN iniciales usando el `.env` | `false`; activar solo para un reinicio de recuperación |
 | `SEED_CLIENT1_EMAIL/PASSWORD` | Credenciales de la primera cuenta CLIENTE | Definir en `.env` |
 | `SEED_CLIENT2_EMAIL/PASSWORD` | Credenciales de la segunda cuenta CLIENTE | Definir en `.env` |
 
 No subir `.env` al repositorio ni colocar credenciales reales en el README.
+
+Para recuperar el acceso de `admin1@corralon.local` o `admin2@corralon.local`, definí una contraseña nueva en el `.env`, activá temporalmente `SEED_RESET_ADMIN_PASSWORDS=true` y reiniciá el backend una vez. Luego volvé a dejarlo en `false`; iniciá sesión en `/ingresar` con el email y la contraseña definidos. Esta opción no cambia contraseñas de clientes.
 
 ## Ejecución local del backend
 
@@ -488,6 +491,8 @@ Las pruebas cubren tanto flujos correctos como errores de negocio: recursos inex
 ## Persistencia y datos
 
 En desarrollo, Hibernate utiliza `ddl-auto=update` para crear o ajustar las tablas a partir de las entidades. Esta configuración es conveniente para desarrollo y pruebas, pero debe revisarse antes de un entorno productivo.
+
+Al iniciar, el backend también actualiza las restricciones MySQL obsoletas de `usuarios.rol` y `usuarios.tipo_usuario` para aceptar los roles actuales, incluido `VENDEDOR`; conserva los demás controles y los datos existentes.
 
 La base de datos MySQL de Docker utiliza un volumen persistente llamado `ferreteria_mysql_data`. Por eso `docker compose down` conserva la información, mientras que `docker compose down -v` la elimina.
 

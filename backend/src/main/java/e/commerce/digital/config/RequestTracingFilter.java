@@ -30,11 +30,26 @@ public class RequestTracingFilter extends OncePerRequestFilter {
 
         try {
             filterChain.doFilter(request, response);
+        } catch (IOException | ServletException ex) {
+            registrarFallo(request, response, ex);
+            throw ex;
+        } catch (RuntimeException ex) {
+            registrarFallo(request, response, ex);
+            throw ex;
         } finally {
             long durationMillis = (System.nanoTime() - startedAt) / 1_000_000;
             log.info("HTTP {} {} completed status={} durationMs={}",
                     request.getMethod(), request.getRequestURI(), response.getStatus(), durationMillis);
             MDC.remove(REQUEST_ID_MDC_KEY);
         }
+    }
+
+    private void registrarFallo(HttpServletRequest request, HttpServletResponse response, Exception ex) {
+        if (!response.isCommitted() && response.getStatus() < HttpServletResponse.SC_BAD_REQUEST) {
+            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+        }
+        log.error("HTTP {} {} failed status={} exception={}",
+                request.getMethod(), request.getRequestURI(), response.getStatus(),
+                ex.getClass().getSimpleName(), ex);
     }
 }

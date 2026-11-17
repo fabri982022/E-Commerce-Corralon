@@ -36,15 +36,20 @@ public class ImagenService {
     /** Valida y sube la imagen a la carpeta indicada. Devuelve la URL https y el public_id. */
     public ImagenResponse subir(MultipartFile archivo, String carpeta) {
         validar(archivo);
+        byte[] bytes;
         try {
-            byte[] bytes = archivo.getBytes();
-            validarFirma(bytes);
+            bytes = archivo.getBytes();
+        } catch (IOException e) {
+            throw new ServicioImagenesException("No se pudo leer la imagen", e);
+        }
+        validarFirma(bytes);
 
-            // Las cuentas nuevas de Cloudinary usan carpetas dinámicas: el parámetro "folder" no se debe usar.
-            // Se fija el public_id con la ruta y un UUID (nunca el nombre que envía el cliente)
-            // y asset_folder con la misma ruta, para que la imagen se vea en esa carpeta del panel.
-            String publicId = carpeta + "/" + UUID.randomUUID();
+        // Las cuentas nuevas de Cloudinary usan carpetas dinámicas: el parámetro "folder" no se debe usar.
+        // Se fija el public_id con la ruta y un UUID (nunca el nombre que envía el cliente)
+        // y asset_folder con la misma ruta, para que la imagen se vea en esa carpeta del panel.
+        String publicId = carpeta + "/" + UUID.randomUUID();
 
+        try {
             Map<?, ?> resultado = cloudinary.uploader().upload(bytes, ObjectUtils.asMap(
                     "public_id", publicId,
                     "asset_folder", carpeta,
@@ -54,7 +59,7 @@ public class ImagenService {
             return new ImagenResponse(
                     (String) resultado.get("secure_url"),
                     (String) resultado.get("public_id"));
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             throw new ServicioImagenesException("No se pudo subir la imagen", e);
         }
     }
@@ -66,7 +71,7 @@ public class ImagenService {
         }
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             throw new ServicioImagenesException("No se pudo eliminar la imagen", e);
         }
     }

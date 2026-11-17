@@ -28,10 +28,12 @@ public class InitialUsersSeeder implements CommandLineRunner {
     private final SeedAccount admin2;
     private final SeedAccount client1;
     private final SeedAccount client2;
+    private final boolean resetAdminPasswords;
 
     public InitialUsersSeeder(
             UsuarioRepository usuarioRepository,
             PasswordEncoder passwordEncoder,
+            @Value("${app.seed.reset-admin-passwords:false}") boolean resetAdminPasswords,
             @Value("${app.seed.admin1.email:}") String admin1Email,
             @Value("${app.seed.admin1.password:}") String admin1Password,
             @Value("${app.seed.admin2.email:}") String admin2Email,
@@ -42,6 +44,7 @@ public class InitialUsersSeeder implements CommandLineRunner {
             @Value("${app.seed.client2.password:}") String client2Password) {
         this.usuarioRepository = usuarioRepository;
         this.passwordEncoder = passwordEncoder;
+        this.resetAdminPasswords = resetAdminPasswords;
         this.admin1 = new SeedAccount(admin1Email, admin1Password, Rol.ADMIN, "Administrador", "Principal");
         this.admin2 = new SeedAccount(admin2Email, admin2Password, Rol.ADMIN, "Administrador", "Operador");
         this.client1 = new SeedAccount(client1Email, client1Password, Rol.CLIENTE, "Cliente", "Demo");
@@ -72,6 +75,12 @@ public class InitialUsersSeeder implements CommandLineRunner {
             Usuario user = existing.get();
             if (user.getRol() != account.role()) {
                 throw new IllegalStateException("El correo configurado para la cuenta inicial ya existe con otro rol: " + email);
+            }
+            if (resetAdminPasswords && account.role() == Rol.ADMIN) {
+                user.setPasswordHash(passwordEncoder.encode(account.password()));
+                usuarioRepository.save(user);
+                log.info("Se restableció la contraseña de la cuenta inicial ADMIN {}", email);
+                return;
             }
             log.info("La cuenta inicial {} ya existe; se conserva sin cambios", email);
             return;
