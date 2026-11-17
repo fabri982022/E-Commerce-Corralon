@@ -8,6 +8,7 @@ import e.commerce.digital.exception.RecursoNoEncontradoException;
 import e.commerce.digital.mapper.ProductoMapper;
 import e.commerce.digital.models.Producto;
 import e.commerce.digital.models.Subcategoria;
+import e.commerce.digital.models.UsuarioVendedor;
 import e.commerce.digital.repository.ProductoRepository;
 import e.commerce.digital.repository.SubcategoriaRepository;
 import e.commerce.digital.testutil.DatosDePrueba;
@@ -159,6 +160,18 @@ class ProductoServiceTest {
     void obtenerPublico_categoriaInactiva() {
         Producto producto = DatosDePrueba.producto(5L, "Látex", "100.00", 3);
         producto.getSubcategoria().getCategoria().setActivo(false);
+        when(productoRepository.findById(5L)).thenReturn(Optional.of(producto));
+
+        assertThatThrownBy(() -> service.obtenerPublico(5L)).isInstanceOf(RecursoNoEncontradoException.class);
+    }
+
+    @Test
+    @DisplayName("obtenerPublico: oculta publicaciones de una cuenta vendedora desactivada")
+    void obtenerPublico_vendedorDesactivado() {
+        Producto producto = DatosDePrueba.producto(5L, "Látex", "100.00", 3);
+        UsuarioVendedor vendedor = new UsuarioVendedor();
+        vendedor.setActivo(false);
+        producto.setVendedor(vendedor);
         when(productoRepository.findById(5L)).thenReturn(Optional.of(producto));
 
         assertThatThrownBy(() -> service.obtenerPublico(5L)).isInstanceOf(RecursoNoEncontradoException.class);

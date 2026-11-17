@@ -83,6 +83,12 @@ services:
       TZ: ${TZ:-America/Argentina/Jujuy}
     ports:
       - "${BACKEND_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/127.0.0.1/8080'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
 
   # ---------- Frontend (React + nginx) ----------
   frontend:
@@ -93,7 +99,7 @@ services:
     restart: unless-stopped
     depends_on:
       backend:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "${FRONTEND_PORT:-3000}:80"
 

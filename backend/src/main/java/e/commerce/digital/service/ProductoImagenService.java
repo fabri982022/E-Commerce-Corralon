@@ -2,6 +2,7 @@ package e.commerce.digital.service;
 
 import e.commerce.digital.dto.common.ImagenResponse;
 import e.commerce.digital.dto.producto.ProductoResponse;
+import e.commerce.digital.exception.OperacionInvalidaException;
 import e.commerce.digital.mapper.ProductoMapper;
 import e.commerce.digital.models.Producto;
 import e.commerce.digital.repository.ProductoRepository;
@@ -23,6 +24,21 @@ public class ProductoImagenService {
     @Transactional
     public ProductoResponse actualizarImagen(Long idProducto, MultipartFile archivo) {
         Producto producto = buscar(idProducto);
+        return actualizarImagen(producto, archivo);
+    }
+
+    @Transactional
+    public ProductoResponse actualizarImagenVendedor(String email, Long idProducto, MultipartFile archivo) {
+        Producto producto = productoRepository.findByIdProductoAndVendedor_Email(idProducto, email)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Producto no encontrado"));
+        if (producto.getVendedor() == null || !Boolean.TRUE.equals(producto.getVendedor().getActivo())) {
+            throw new OperacionInvalidaException("La cuenta vendedora no está habilitada");
+        }
+        producto.setActivo(false);
+        return actualizarImagen(producto, archivo);
+    }
+
+    private ProductoResponse actualizarImagen(Producto producto, MultipartFile archivo) {
         String publicIdAnterior = producto.getImagenPublicId();
 
         ImagenResponse nueva = imagenService.subir(archivo, ImagenService.CARPETA_PRODUCTOS);

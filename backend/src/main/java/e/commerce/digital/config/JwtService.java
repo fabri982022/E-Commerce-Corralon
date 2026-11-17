@@ -27,7 +27,7 @@ public class JwtService {
 
     public static final String COOKIE_NAME = "AUTH_TOKEN";
     private static final String ISSUER = "corralon-central";
-    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "CLIENTE");
+    private static final Set<String> ALLOWED_ROLES = Set.of("ADMIN", "CLIENTE", "VENDEDOR");
 
     private final SecretKey jwtSecretKey;
 

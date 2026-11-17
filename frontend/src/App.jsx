@@ -66,6 +66,7 @@ function Header() {
                     <li><span className="dropdown-item-text small text-muted">{user.email}</span></li>
                     <li><hr className="dropdown-divider" /></li>
                     {user.rol === 'CLIENTE' && <li><Link className="dropdown-item" to="/mis-compras"><i className="bi bi-box-seam me-2" />Mis compras</Link></li>}
+                    {user.rol === 'VENDEDOR' && <li><Link className="dropdown-item" to="/vendedor"><i className="bi bi-shop me-2" />Mi tienda</Link></li>}
                     {user.rol === 'ADMIN' && <li><Link className="dropdown-item" to="/admin"><i className="bi bi-speedometer2 me-2" />Panel administrador</Link></li>}
                     <li><button className="dropdown-item" onClick={logout}><i className="bi bi-box-arrow-right me-2" />Cerrar sesión</button></li>
                   </ul>
@@ -81,6 +82,7 @@ function Header() {
               <Link to="/" onClick={() => setMenuOpen(false)}><i className="bi bi-house-door me-1" />Inicio</Link>
               <Link to="/?categoria=todos" onClick={() => setMenuOpen(false)}><i className="bi bi-grid me-1" />Categorías</Link>
               {user?.rol === 'CLIENTE' && <Link to="/mis-compras" onClick={() => setMenuOpen(false)}>Mis compras</Link>}
+              {user?.rol === 'VENDEDOR' && <Link to="/vendedor" onClick={() => setMenuOpen(false)}>Mi tienda</Link>}
               {user?.rol === 'ADMIN' && <Link to="/admin" onClick={() => setMenuOpen(false)}>Administración</Link>}
             </div>
             <div className="nav-benefits"><span><i className="bi bi-patch-check me-1" />Productos seleccionados</span><span><i className="bi bi-credit-card me-1" />Pagá seguro</span></div>
@@ -114,10 +116,12 @@ function App() {
           <Route path="/producto/:id" element={<ProductPage />} />
           <Route path="/ingresar" element={<AuthPage />} />
           <Route path="/registro" element={<RegisterPage />} />
+          <Route path="/registro-vendedor" element={<VendorRegisterPage />} />
           <Route path="/carrito" element={<ProtectedRoute role="CLIENTE"><CartPage /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute role="CLIENTE"><CartRoute><CheckoutPage /></CartRoute></ProtectedRoute>} />
           <Route path="/mis-compras" element={<ProtectedRoute role="CLIENTE"><OrdersPage /></ProtectedRoute>} />
           <Route path="/admin" element={<ProtectedRoute role="ADMIN"><AdminPage /></ProtectedRoute>} />
+          <Route path="/vendedor" element={<ProtectedRoute role="VENDEDOR"><VendorPage /></ProtectedRoute>} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
@@ -345,7 +349,7 @@ function AuthPage() {
   const location = useLocation();
   const notify = useNotify();
 
-  if (user) return <Navigate to={user.rol === 'ADMIN' ? '/admin' : '/'} replace />;
+  if (user) return <Navigate to={user.rol === 'ADMIN' ? '/admin' : user.rol === 'VENDEDOR' ? '/vendedor' : '/'} replace />;
 
   const onChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
   const submit = async (event) => {
@@ -367,7 +371,7 @@ function AuthPage() {
       }
       setUser(profile);
       const target = location.state?.returnTo;
-      navigate(profile.rol === 'ADMIN' ? '/admin' : target?.pathname || '/', { replace: true });
+      navigate(profile.rol === 'ADMIN' ? '/admin' : profile.rol === 'VENDEDOR' ? '/vendedor' : target?.pathname || '/', { replace: true });
     } catch (requestError) {
       setError(requestError.status === 401 ? 'Correo o contraseña incorrectos.' : requestError.message);
     } finally {
@@ -389,6 +393,7 @@ function AuthPage() {
           <button className="btn btn-primary btn-lg w-100" disabled={submitting}>{submitting ? 'Ingresando...' : 'Ingresar'} {!submitting && <i className="bi bi-arrow-right ms-2" />}</button>
         </form>
         <div className="auth-switch">¿Todavía no tenés cuenta? <Link to="/registro" state={location.state}>Crear cuenta</Link></div>
+        <div className="auth-switch">¿Querés vender? <Link to="/registro-vendedor">Solicitá tu cuenta vendedora</Link></div>
         <div className="auth-secure"><i className="bi bi-shield-lock me-1" />Tu información está protegida</div>
       </div>
     </AuthLayout>
@@ -428,12 +433,58 @@ function RegisterPage() {
         <form onSubmit={submit} className="auth-form">
           <div className="form-row"><div><label htmlFor="nombre">Nombre</label><input id="nombre" name="nombre" className="form-control" required maxLength={50} value={form.nombre} onChange={onChange} /></div><div><label htmlFor="apellido">Apellido</label><input id="apellido" name="apellido" className="form-control" required maxLength={50} value={form.apellido} onChange={onChange} /></div></div>
           <label htmlFor="email">Correo electrónico</label><input id="email" type="email" name="email" className="form-control" autoComplete="email" required value={form.email} onChange={onChange} />
-          <label htmlFor="password">Contraseña</label><input id="password" type="password" name="password" className="form-control" autoComplete="new-password" minLength={8} required value={form.password} onChange={onChange} />
+          <label htmlFor="password">Contraseña</label><input id="password" type="password" name="password" className="form-control" autoComplete="new-password" minLength={8} maxLength={72} required value={form.password} onChange={onChange} />
           <label htmlFor="telefono">Teléfono <span className="optional">(opcional)</span></label><input id="telefono" name="telefono" className="form-control" maxLength={15} value={form.telefono} onChange={onChange} />
           <label htmlFor="direccion">Dirección de entrega <span className="optional">(opcional)</span></label><input id="direccion" name="direccion" className="form-control" maxLength={255} value={form.direccion} onChange={onChange} />
           <button className="btn btn-primary btn-lg w-100 mt-2" disabled={submitting}>{submitting ? 'Creando cuenta...' : 'Crear cuenta'}</button>
         </form>
         <div className="auth-switch">¿Ya tenés cuenta? <Link to="/ingresar" state={location.state}>Ingresar</Link></div>
+        <div className="auth-switch">¿Querés vender en la plataforma? <Link to="/registro-vendedor">Solicitá una cuenta vendedora</Link></div>
+      </div>
+    </AuthLayout>
+  );
+}
+
+function VendorRegisterPage() {
+  const [form, setForm] = useState({ nombre: '', apellido: '', email: '', password: '', telefono: '', direccion: '' });
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const navigate = useNavigate();
+  const notify = useNotify();
+
+  const onChange = (event) => setForm({ ...form, [event.target.name]: event.target.value });
+  const submit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      await api('/auth/registro-vendedor', { method: 'POST', body: JSON.stringify(form) });
+      notify('Solicitud enviada. Un administrador debe aprobarla antes de que puedas ingresar.');
+      navigate('/ingresar', { replace: true });
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <AuthLayout>
+      <div className="auth-card register-card">
+        <div className="auth-icon"><i className="bi bi-shop" /></div>
+        <h1>Vendé en Corralón Central</h1>
+        <p>Creá tu solicitud de vendedor. La cuenta se habilita cuando un administrador la apruebe.</p>
+        <ErrorBanner message={error} />
+        <form onSubmit={submit} className="auth-form">
+          <div className="form-row"><div><label htmlFor="seller-nombre">Nombre</label><input id="seller-nombre" name="nombre" className="form-control" required maxLength={50} value={form.nombre} onChange={onChange} /></div><div><label htmlFor="seller-apellido">Apellido</label><input id="seller-apellido" name="apellido" className="form-control" required maxLength={50} value={form.apellido} onChange={onChange} /></div></div>
+          <label htmlFor="seller-email">Correo electrónico</label><input id="seller-email" type="email" name="email" className="form-control" autoComplete="email" required maxLength={50} value={form.email} onChange={onChange} />
+          <label htmlFor="seller-password">Contraseña</label><input id="seller-password" type="password" name="password" className="form-control" autoComplete="new-password" minLength={8} maxLength={72} required value={form.password} onChange={onChange} />
+          <label htmlFor="seller-telefono">Teléfono <span className="optional">(opcional)</span></label><input id="seller-telefono" name="telefono" className="form-control" maxLength={15} value={form.telefono} onChange={onChange} />
+          <label htmlFor="seller-direccion">Dirección <span className="optional">(opcional)</span></label><input id="seller-direccion" name="direccion" className="form-control" maxLength={255} value={form.direccion} onChange={onChange} />
+          <button className="btn btn-primary btn-lg w-100 mt-2" disabled={submitting}>{submitting ? 'Enviando solicitud...' : 'Solicitar cuenta vendedora'}</button>
+        </form>
+        <div className="auth-switch">¿Ya tenés una cuenta? <Link to="/ingresar">Ingresar</Link></div>
+        <div className="auth-switch">¿Querés comprar? <Link to="/registro">Crear cuenta de cliente</Link></div>
       </div>
     </AuthLayout>
   );
@@ -592,10 +643,171 @@ function OrdersPage() {
   );
 }
 
+function VendorPage() {
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+  const [categoryId, setCategoryId] = useState('');
+  const [image, setImage] = useState(null);
+  const [imageInputKey, setImageInputKey] = useState(0);
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', stock: '', idSubcategoria: '' });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const notify = useNotify();
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [ownProducts, categoryList] = await Promise.all([
+        api('/vendedor/productos'),
+        api('/categorias'),
+      ]);
+      setProducts(ownProducts);
+      setCategories(categoryList);
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    if (!categoryId) {
+      setSubcategories([]);
+      setLoadingSubcategories(false);
+      setForm((current) => ({ ...current, idSubcategoria: '' }));
+      return;
+    }
+    let active = true;
+    setLoadingSubcategories(true);
+    api(`/categorias/${categoryId}/subcategorias`)
+      .then((items) => {
+        if (active) {
+          setSubcategories(items);
+          setForm((current) => ({ ...current, idSubcategoria: '' }));
+        }
+      })
+      .catch((requestError) => {
+        if (active) setError(requestError.message);
+      })
+      .finally(() => {
+        if (active) setLoadingSubcategories(false);
+      });
+    return () => { active = false; };
+  }, [categoryId]);
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const created = await api('/vendedor/productos', {
+        method: 'POST',
+        body: JSON.stringify({
+          ...form,
+          precio: Number(form.precio),
+          stock: Number(form.stock),
+          idSubcategoria: Number(form.idSubcategoria),
+        }),
+      });
+      let imageError = '';
+      if (image) {
+        const data = new FormData();
+        data.append('archivo', image);
+        try {
+          await api(`/vendedor/productos/${created.idProducto}/imagen`, { method: 'PUT', body: data });
+        } catch (requestError) {
+          imageError = `El producto quedó creado, pero no se pudo subir la imagen: ${requestError.message}`;
+        }
+      }
+      setForm({ nombre: '', descripcion: '', precio: '', stock: '', idSubcategoria: '' });
+      setCategoryId('');
+      setImage(null);
+      setImageInputKey((key) => key + 1);
+      notify(
+        imageError || 'Producto enviado. Quedará visible en el catálogo cuando un administrador lo apruebe.',
+        imageError ? 'danger' : 'success',
+      );
+      await load();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="container page-container">
+      <div className="breadcrumbs"><Link to="/">Inicio</Link><i className="bi bi-chevron-right" /><span>Mi tienda</span></div>
+      <SectionTitle eyebrow="PANEL DE VENDEDOR" title="Publicá tus productos" />
+      <div className="alert alert-info seller-review-note"><i className="bi bi-info-circle me-2" />Cada publicación requiere aprobación administrativa antes de aparecer en el catálogo.</div>
+      <ErrorBanner message={error} onRetry={load} />
+      <div className="seller-layout">
+        <form className="seller-form" onSubmit={submit}>
+          <h3><i className="bi bi-plus-circle me-2" />Nuevo producto</h3>
+          <p>Elegí una categoría y completá los datos de tu publicación.</p>
+          <label htmlFor="seller-product-name">Nombre del producto</label>
+          <input id="seller-product-name" className="form-control" required maxLength={100} value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} />
+          <label htmlFor="seller-product-description">Descripción</label>
+          <textarea id="seller-product-description" className="form-control" rows="3" maxLength={500} value={form.descripcion} onChange={(event) => setForm({ ...form, descripcion: event.target.value })} />
+          <div className="form-row">
+            <div><label htmlFor="seller-product-price">Precio</label><input id="seller-product-price" type="number" className="form-control" min="0" step="0.01" required value={form.precio} onChange={(event) => setForm({ ...form, precio: event.target.value })} /></div>
+            <div><label htmlFor="seller-product-stock">Stock</label><input id="seller-product-stock" type="number" className="form-control" min="0" step="1" required value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} /></div>
+          </div>
+          <label htmlFor="seller-category">Categoría</label>
+          <select id="seller-category" className="form-select" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)}>
+            <option value="">Seleccioná una categoría</option>
+            {categories.map((category) => <option key={category.idCategoria} value={category.idCategoria}>{category.nombre}</option>)}
+          </select>
+          {!categories.length && <div className="seller-category-help">Todavía no hay categorías activas. Un administrador puede crearlas desde su panel.</div>}
+          <label htmlFor="seller-subcategory">Subcategoría</label>
+          <select id="seller-subcategory" className="form-select" required disabled={!categoryId || !subcategories.length || loadingSubcategories} value={form.idSubcategoria} onChange={(event) => setForm({ ...form, idSubcategoria: event.target.value })}>
+            <option value="">Seleccioná una subcategoría</option>
+            {subcategories.map((subcategory) => <option key={subcategory.idSubcategoria} value={subcategory.idSubcategoria}>{subcategory.nombre}</option>)}
+          </select>
+          {categoryId && !subcategories.length && !loadingSubcategories && <div className="seller-category-help">Esta categoría todavía no tiene subcategorías activas.</div>}
+          <label htmlFor="seller-product-image">Imagen <span className="optional">(opcional)</span></label>
+          <input key={imageInputKey} id="seller-product-image" type="file" className="form-control" accept="image/*" onChange={(event) => setImage(event.target.files?.[0] || null)} />
+          <button type="submit" className="btn btn-primary btn-lg w-100 mt-3" disabled={submitting || !categories.length || !subcategories.length}>
+            {submitting ? 'Enviando producto...' : 'Enviar a revisión'}
+          </button>
+        </form>
+        <section className="seller-products">
+          <div className="seller-list-heading"><div><h3>Mis publicaciones</h3><p>Consultá el estado de aprobación de tus productos.</p></div><button className="btn btn-outline-primary btn-sm" onClick={load} disabled={loading}><i className="bi bi-arrow-clockwise me-1" />Actualizar</button></div>
+          {loading ? <Loading /> : products.length ? (
+            <div className="seller-product-list">
+              {products.map((product) => (
+                <article className="seller-product-card" key={product.idProducto}>
+                  <img src={product.imagenUrl || placeholder} alt={product.nombre} onError={(event) => { event.currentTarget.src = placeholder; }} />
+                  <div className="seller-product-info">
+                    <strong>{product.nombre}</strong>
+                    <span>{product.nombreCategoria} · {product.nombreSubcategoria}</span>
+                    <span>{formatPrice(product.precio)} · Stock: {product.stock}</span>
+                  </div>
+                  <span className={`badge ${product.activo ? 'text-bg-success' : 'text-bg-warning'}`}>{product.activo ? 'Aprobado' : 'Pendiente'}</span>
+                </article>
+              ))}
+            </div>
+          ) : <EmptyState icon="bi-box-seam" title="Todavía no publicaste productos" description="Completá el formulario para enviar tu primera publicación a revisión." />}
+        </section>
+      </div>
+    </div>
+  );
+}
+
 function AdminPage() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [sellers, setSellers] = useState([]);
+  const [categoryName, setCategoryName] = useState('');
+  const [subcategoryName, setSubcategoryName] = useState('');
+  const [subcategoryCategoryId, setSubcategoryCategoryId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [savingCatalog, setSavingCatalog] = useState(false);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('');
   const notify = useNotify();
@@ -604,12 +816,14 @@ function AdminPage() {
     setLoading(true);
     setError('');
     try {
-      const [productPage, categoryList] = await Promise.all([
+      const [productPage, categoryList, sellerPage] = await Promise.all([
         api('/admin/productos?page=0&size=100&sort=nombre,asc'),
         api('/admin/categorias'),
+        api('/admin/usuarios?rol=VENDEDOR&page=0&size=100&sort=apellido,asc'),
       ]);
       setProducts(productPage.contenido || []);
       setCategories(categoryList);
+      setSellers(sellerPage.contenido || []);
     } catch (requestError) {
       setError(requestError.message);
     } finally {
@@ -628,19 +842,103 @@ function AdminPage() {
     }
   };
 
+  const approveSeller = async (seller) => {
+    try {
+      await api(`/admin/usuarios/${seller.idUsuario}/estado`, {
+        method: 'PATCH',
+        body: JSON.stringify({ activo: true }),
+      });
+      notify(`Cuenta de ${seller.nombre} ${seller.apellido} aprobada.`);
+      await load();
+    } catch (requestError) {
+      notify(requestError.message, 'danger');
+    }
+  };
+
+  const createCategory = async (event) => {
+    event.preventDefault();
+    setSavingCatalog(true);
+    setError('');
+    try {
+      await api('/admin/categorias', {
+        method: 'POST',
+        body: JSON.stringify({ nombre: categoryName.trim() }),
+      });
+      setCategoryName('');
+      notify('Categoría creada y disponible para vendedores.');
+      await load();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingCatalog(false);
+    }
+  };
+
+  const createSubcategory = async (event) => {
+    event.preventDefault();
+    setSavingCatalog(true);
+    setError('');
+    try {
+      await api('/admin/subcategorias', {
+        method: 'POST',
+        body: JSON.stringify({
+          nombre: subcategoryName.trim(),
+          idCategoria: Number(subcategoryCategoryId),
+        }),
+      });
+      setSubcategoryName('');
+      notify('Subcategoría creada y disponible para vendedores.');
+      await load();
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setSavingCatalog(false);
+    }
+  };
+
   const filtered = useMemo(() => products.filter((product) => product.nombre.toLowerCase().includes(filter.toLowerCase())), [products, filter]);
   return (
     <div className="container page-container">
       <div className="breadcrumbs"><Link to="/">Inicio</Link><i className="bi bi-chevron-right" /><span>Administración</span></div>
       <SectionTitle eyebrow="GESTIÓN DE LA TIENDA" title="Panel administrador" />
       <div className="admin-stats"><div><span className="admin-stat-icon"><i className="bi bi-box-seam" /></span><span><small>Productos</small><strong>{products.length}</strong></span></div><div><span className="admin-stat-icon"><i className="bi bi-grid" /></span><span><small>Categorías</small><strong>{categories.length}</strong></span></div><div><span className="admin-stat-icon"><i className="bi bi-check2-circle" /></span><span><small>Activos</small><strong>{products.filter((item) => item.activo).length}</strong></span></div></div>
-      <div className="admin-table-head"><div><h3>Productos</h3><p>Administrá la visibilidad de los productos del catálogo.</p></div><input className="form-control" placeholder="Filtrar productos..." value={filter} onChange={(event) => setFilter(event.target.value)} /></div>
       <ErrorBanner message={error} onRetry={load} />
+      <div className="admin-catalog-tools">
+        <form className="admin-catalog-form" onSubmit={createCategory}>
+          <h3><i className="bi bi-grid me-2" />Crear categoría</h3>
+          <p>Las categorías nuevas quedan activas para que los vendedores puedan elegirlas.</p>
+          <label htmlFor="admin-category-name">Nombre</label>
+          <input id="admin-category-name" className="form-control" maxLength={100} required value={categoryName} onChange={(event) => setCategoryName(event.target.value)} />
+          <button className="btn btn-outline-primary mt-3" disabled={savingCatalog}>{savingCatalog ? 'Guardando...' : 'Crear categoría'}</button>
+        </form>
+        <form className="admin-catalog-form" onSubmit={createSubcategory}>
+          <h3><i className="bi bi-diagram-3 me-2" />Crear subcategoría</h3>
+          <p>Vinculá la subcategoría con una categoría existente.</p>
+          <label htmlFor="admin-subcategory-category">Categoría</label>
+          <select id="admin-subcategory-category" className="form-select" required value={subcategoryCategoryId} onChange={(event) => setSubcategoryCategoryId(event.target.value)}>
+            <option value="">Seleccioná una categoría</option>
+            {categories.map((category) => <option key={category.idCategoria} value={category.idCategoria}>{category.nombre}</option>)}
+          </select>
+          <label htmlFor="admin-subcategory-name">Nombre</label>
+          <input id="admin-subcategory-name" className="form-control" maxLength={100} required value={subcategoryName} onChange={(event) => setSubcategoryName(event.target.value)} />
+          <button className="btn btn-outline-primary mt-3" disabled={savingCatalog || !categories.length}>{savingCatalog ? 'Guardando...' : 'Crear subcategoría'}</button>
+        </form>
+      </div>
+      <div className="admin-table-head"><div><h3>Solicitudes de vendedor</h3><p>Aprobá cuentas para habilitarles el acceso al panel de vendedor.</p></div></div>
+      {loading ? <Loading /> : (
+        <div className="table-responsive admin-table-wrap mb-4">
+          <table className="table align-middle admin-table"><thead><tr><th>Nombre</th><th>Correo electrónico</th><th>Teléfono</th><th>Estado</th><th className="text-end">Acción</th></tr></thead><tbody>
+            {sellers.map((seller) => <tr key={seller.idUsuario}><td>{seller.nombre} {seller.apellido}</td><td>{seller.email}</td><td>{seller.telefono || '—'}</td><td><span className={`badge ${seller.activo ? 'text-bg-success' : 'text-bg-warning'}`}>{seller.activo ? 'Aprobado' : 'Pendiente'}</span></td><td className="text-end">{seller.activo ? <span className="text-muted">Habilitado</span> : <button className="btn btn-sm btn-outline-success" onClick={() => approveSeller(seller)}>Aprobar</button>}</td></tr>)}
+            {!sellers.length && <tr><td colSpan="5" className="text-center text-muted py-4">No hay solicitudes de vendedor.</td></tr>}
+          </tbody></table>
+        </div>
+      )}
+      <div className="admin-table-head"><div><h3>Productos</h3><p>Administrá la visibilidad de los productos del catálogo.</p></div><input className="form-control" placeholder="Filtrar productos..." value={filter} onChange={(event) => setFilter(event.target.value)} /></div>
       {loading ? <Loading /> : (
         <div className="table-responsive admin-table-wrap">
-          <table className="table align-middle admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Estado</th><th className="text-end">Acción</th></tr></thead><tbody>
-            {filtered.map((product) => <tr key={product.idProducto}><td><div className="admin-product"><img src={product.imagenUrl || placeholder} alt="" /><strong>{product.nombre}</strong></div></td><td>{product.nombreCategoria}</td><td>{formatPrice(product.precio)}</td><td>{product.stock}</td><td><span className={`badge ${product.activo ? 'text-bg-success' : 'text-bg-secondary'}`}>{product.activo ? 'Activo' : 'Inactivo'}</span></td><td className="text-end"><button className={`btn btn-sm ${product.activo ? 'btn-outline-danger' : 'btn-outline-success'}`} onClick={() => toggleProduct(product)}>{product.activo ? 'Desactivar' : 'Activar'}</button></td></tr>)}
-            {!filtered.length && <tr><td colSpan="6" className="text-center text-muted py-5">No hay productos para mostrar.</td></tr>}
+          <table className="table align-middle admin-table"><thead><tr><th>Producto</th><th>Categoría</th><th>Origen</th><th>Precio</th><th>Stock</th><th>Estado</th><th className="text-end">Acción</th></tr></thead><tbody>
+            {filtered.map((product) => <tr key={product.idProducto}><td><div className="admin-product"><img src={product.imagenUrl || placeholder} alt="" /><strong>{product.nombre}</strong></div></td><td>{product.nombreCategoria}</td><td>{product.publicadoPorVendedor ? 'Vendedor' : 'Administración'}</td><td>{formatPrice(product.precio)}</td><td>{product.stock}</td><td><span className={`badge ${product.activo ? 'text-bg-success' : 'text-bg-secondary'}`}>{product.activo ? 'Activo' : 'Pendiente'}</span></td><td className="text-end"><button className={`btn btn-sm ${product.activo ? 'btn-outline-danger' : 'btn-outline-success'}`} onClick={() => toggleProduct(product)}>{product.activo ? 'Desactivar' : 'Aprobar'}</button></td></tr>)}
+            {!filtered.length && <tr><td colSpan="7" className="text-center text-muted py-5">No hay productos para mostrar.</td></tr>}
           </tbody></table>
         </div>
       )}

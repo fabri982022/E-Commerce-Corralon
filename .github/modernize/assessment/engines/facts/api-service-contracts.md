@@ -1,6 +1,6 @@
 # API & Service Communication Contracts
 
-La API publica 57 endpoints REST para autenticación, catálogo, perfil, carrito, compras y administración. La comunicación navegador-servidor es síncrona por HTTP/JSON y el frontend utiliza Nginx para enviar `/api` al backend.
+La API publica 62 endpoints REST para autenticación, catálogo, perfil, carrito, compras, vendedores y administración. La comunicación navegador-servidor es síncrona por HTTP/JSON y el frontend utiliza Nginx para enviar `/api` al backend.
 
 ## Service Catalog
 
@@ -17,13 +17,14 @@ La API publica 57 endpoints REST para autenticación, catálogo, perfil, carrito
 
 Base local: `http://localhost:3000/api` (mismo origen a través de Nginx), o `http://localhost:8080/api` para acceder directamente al backend. No hay versionado de API en la URL.
 
-Todas las rutas de la tabla son relativas al host indicado. `CLIENTE`, `ADMIN` y `Autenticado` describen el acceso requerido. Los endpoints de creación devuelven `201 Created` y el recurso; la mayoría de lecturas, actualizaciones y eliminaciones devuelven `200 OK`. El cierre de sesión devuelve `204 No Content`.
+Todas las rutas de la tabla son relativas al host indicado. `CLIENTE`, `VENDEDOR`, `ADMIN` y `Autenticado` describen el acceso requerido. Los endpoints de creación devuelven `201 Created` y el recurso; la mayoría de lecturas, actualizaciones y eliminaciones devuelven `200 OK`. El cierre de sesión devuelve `204 No Content`.
 
 Los parámetros de paginación siguen `page` (base cero), `size` y `sort` con la convención Spring Data. Los filtros de consulta no especificados como obligatorios son opcionales.
 
 | Controller | Método | Ruta | Acceso | Query / Path / Body | Respuesta |
 |---|---|---|---|---|---|
 | AuthController | POST | `/api/auth/registro` | Público | Body `RegistroRequest` | `UsuarioResponse`, 201 |
+| AuthController | POST | `/api/auth/registro-vendedor` | Público | Body `RegistroVendedorRequest` | `UsuarioResponse` inactivo, 201 |
 | AuthController | POST | `/api/auth/login` | Público | Body `LoginRequest` | `UsuarioResponse`, 200; instala cookie JWT |
 | AuthController | POST | `/api/auth/logout` | Público | Sin body | Sin body, 204; expira cookie JWT |
 | CatalogoController | GET | `/api/categorias` | Público | Sin parámetros | `List<CategoriaResponse>` |
@@ -67,6 +68,10 @@ Los parámetros de paginación siguen `page` (base cero), `size` y `sort` con la
 | AdminProductoController | PATCH | `/api/admin/productos/{idProducto}/desactivar` | ADMIN | Path `idProducto`; sin body | `ProductoResponse` |
 | ProductoImagenAdminController | PUT | `/api/admin/productos/{idProducto}/imagen` | ADMIN | Path `idProducto`; multipart file field `archivo` | `ProductoResponse` |
 | ProductoImagenAdminController | DELETE | `/api/admin/productos/{idProducto}/imagen` | ADMIN | Path `idProducto`; sin body | `ProductoResponse` |
+| VendedorProductoController | GET | `/api/vendedor/productos` | VENDEDOR | Sin parámetros; solo publicaciones propias | `List<ProductoResponse>` |
+| VendedorProductoController | POST | `/api/vendedor/productos` | VENDEDOR | Body `ProductoVendedorRequest` | `ProductoResponse` inactivo, 201 |
+| VendedorProductoController | PUT | `/api/vendedor/productos/{idProducto}` | VENDEDOR | Path `idProducto`; body `ProductoVendedorRequest`; solo producto propio | `ProductoResponse` inactivo |
+| VendedorProductoController | PUT | `/api/vendedor/productos/{idProducto}/imagen` | VENDEDOR | Path `idProducto`; multipart file field `archivo`; solo producto propio | `ProductoResponse` |
 | AdminUsuarioController | GET | `/api/admin/usuarios` | ADMIN | Query opcional `rol`, `page`, `size`, `sort` | `PageResponse<UsuarioResponse>` |
 | AdminUsuarioController | GET | `/api/admin/usuarios/{idUsuario}` | ADMIN | Path `idUsuario` | `UsuarioResponse` |
 | AdminUsuarioController | POST | `/api/admin/usuarios` | ADMIN | Body `UsuarioAdminRequest` | `UsuarioResponse`, 201 |
@@ -112,6 +117,35 @@ Para iniciar sesión, usar `POST /api/auth/login` con el email y la contraseña 
   "direccion": "San Miguel de Tucumán"
 }
 ```
+
+`POST /api/auth/registro-vendedor` — `RegistroVendedorRequest` tiene los mismos datos de contacto y credenciales, pero crea un usuario `VENDEDOR` inactivo:
+
+```json
+{
+  "nombre": "Vera",
+  "apellido": "Vendedora",
+  "email": "vera@example.com",
+  "password": "Cambiar-esta-clave-123",
+  "telefono": "3815550101",
+  "direccion": "San Miguel de Tucumán"
+}
+```
+
+Un administrador lo habilita mediante `PATCH /api/admin/usuarios/{idUsuario}/estado` con `{"activo":true}`. El vendedor usa el mismo `POST /api/auth/login` que los clientes.
+
+`POST /api/vendedor/productos` — `ProductoVendedorRequest` no acepta estado activo. El producto queda pendiente de revisión y solo un administrador puede activarlo con `PATCH /api/admin/productos/{idProducto}/activar`:
+
+```json
+{
+  "nombre": "Pintura látex interior 20 L",
+  "descripcion": "Pintura lavable para interiores",
+  "precio": 25999.9,
+  "stock": 12,
+  "idSubcategoria": 3
+}
+```
+
+Los vendedores solo pueden consultar y modificar publicaciones propias. Al editar una publicación aprobada, incluida su imagen, vuelve a quedar inactiva para requerir una nueva revisión. Solo se aceptan categorías y subcategorías activas. `ProductoResponse.publicadoPorVendedor` permite al administrador distinguir las publicaciones de vendedor de las creadas desde administración.
 
 `POST /api/auth/login` — `LoginRequest`:
 

@@ -1,6 +1,7 @@
 package e.commerce.digital.service;
 
 import e.commerce.digital.dto.auth.RegistroRequest;
+import e.commerce.digital.dto.auth.RegistroVendedorRequest;
 import e.commerce.digital.dto.common.PageResponse;
 import e.commerce.digital.dto.usuario.UsuarioAdminRequest;
 import e.commerce.digital.dto.usuario.UsuarioEstadoRequest;
@@ -13,6 +14,7 @@ import e.commerce.digital.mapper.UsuarioMapper;
 import e.commerce.digital.models.Usuario;
 import e.commerce.digital.models.UsuarioAdmin;
 import e.commerce.digital.models.UsuarioCliente;
+import e.commerce.digital.models.UsuarioVendedor;
 import e.commerce.digital.repository.UsuarioRepository;
 import e.commerce.digital.testutil.DatosDePrueba;
 import e.commerce.digital.util.enumerated.Rol;
@@ -95,6 +97,26 @@ class UsuarioServiceTest {
 
         verifyNoInteractions(passwordEncoder);
         verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("solicitarAltaVendedor: crea una cuenta inactiva pendiente de aprobación")
+    void solicitarAltaVendedor_pendiente() {
+        when(usuarioRepository.existsByEmail("vendedor@mail.com")).thenReturn(false);
+        when(passwordEncoder.encode("Secreta123")).thenReturn("hash-bcrypt");
+        when(usuarioRepository.save(any(Usuario.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UsuarioResponse response = service.solicitarAltaVendedor(new RegistroVendedorRequest(
+                "Vera", "Vendedora", " VENDEDOR@mail.com ", "Secreta123", null, null));
+
+        ArgumentCaptor<Usuario> captor = ArgumentCaptor.forClass(Usuario.class);
+        verify(usuarioRepository).save(captor.capture());
+        assertThat(captor.getValue()).isInstanceOf(UsuarioVendedor.class);
+        assertThat(captor.getValue().getActivo()).isFalse();
+        assertThat(captor.getValue().getPasswordHash()).isEqualTo("hash-bcrypt");
+        assertThat(response.rol()).isEqualTo(Rol.VENDEDOR);
+        assertThat(response.activo()).isFalse();
+        assertThat(response.email()).isEqualTo("vendedor@mail.com");
     }
 
     // ----- Alta por administrador -----

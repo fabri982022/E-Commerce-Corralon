@@ -3,9 +3,11 @@ package e.commerce.digital.service;
 import e.commerce.digital.dto.common.ImagenResponse;
 import e.commerce.digital.dto.producto.ProductoResponse;
 import e.commerce.digital.exception.ImagenInvalidaException;
+import e.commerce.digital.exception.OperacionInvalidaException;
 import e.commerce.digital.exception.RecursoNoEncontradoException;
 import e.commerce.digital.mapper.ProductoMapper;
 import e.commerce.digital.models.Producto;
+import e.commerce.digital.models.UsuarioVendedor;
 import e.commerce.digital.repository.ProductoRepository;
 import e.commerce.digital.testutil.DatosDePrueba;
 import org.junit.jupiter.api.BeforeEach;
@@ -86,6 +88,42 @@ class ProductoImagenServiceTest {
                 .isInstanceOf(ImagenInvalidaException.class);
 
         assertThat(latex.getImagenPublicId()).isEqualTo("ferreteria/productos/vieja");
+        verify(productoRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("actualizarImagenVendedor: imagen modificada requiere una nueva aprobación")
+    void actualizarImagenVendedor_requiereRevision() {
+        UsuarioVendedor vendedor = new UsuarioVendedor();
+        vendedor.setIdUsuario(8L);
+        vendedor.setEmail("vendedor@example.com");
+        latex.setVendedor(vendedor);
+        when(productoRepository.findByIdProductoAndVendedor_Email(5L, vendedor.getEmail()))
+                .thenReturn(Optional.of(latex));
+        when(imagenService.subir(archivo, ImagenService.CARPETA_PRODUCTOS))
+                .thenReturn(new ImagenResponse("https://res.cloudinary.com/demo/nueva.png", "productos/nueva"));
+        when(productoRepository.save(latex)).thenReturn(latex);
+
+        latex.setActivo(true);
+        ProductoResponse response = service.actualizarImagenVendedor(vendedor.getEmail(), 5L, archivo);
+
+        assertThat(response.activo()).isFalse();
+        verify(productoRepository).save(latex);
+    }
+
+    @Test
+    @DisplayName("actualizarImagenVendedor: rechaza una cuenta deshabilitada sin subir la imagen")
+    void actualizarImagenVendedor_vendedorDeshabilitado() {
+        UsuarioVendedor vendedor = new UsuarioVendedor();
+        vendedor.setEmail("vendedor@example.com");
+        vendedor.setActivo(false);
+        latex.setVendedor(vendedor);
+        when(productoRepository.findByIdProductoAndVendedor_Email(5L, vendedor.getEmail()))
+                .thenReturn(Optional.of(latex));
+
+        assertThatThrownBy(() -> service.actualizarImagenVendedor(vendedor.getEmail(), 5L, archivo))
+                .isInstanceOf(OperacionInvalidaException.class);
+        verifyNoInteractions(imagenService);
         verify(productoRepository, never()).save(any());
     }
 

@@ -31,7 +31,7 @@ public class AdminUsuarioController {
 
     private final UsuarioService usuarioService;
 
-    /** Filtro opcional por rol (CLIENTE o ADMIN). */
+    /** Filtro opcional por rol. */
     @GetMapping
     public PageResponse<UsuarioResponse> listar(
             @RequestParam(required = false) Rol rol,

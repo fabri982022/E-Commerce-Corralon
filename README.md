@@ -14,6 +14,9 @@ La aplicación cuenta con una experiencia de compra de punta a punta y una API c
 - La gestión de imágenes tiene controladores REST disponibles.
 - La tienda React permite buscar productos, explorar categorías, registrarse, iniciar sesión, gestionar el carrito y confirmar pedidos.
 - La autenticación utiliza JWT firmado con HS256, transportado en una cookie `HttpOnly`; las APIs validan los roles en el servidor.
+- Clientes y vendedores tienen formularios de alta separados, pero utilizan el mismo login con email y contraseña.
+- Las solicitudes de cuenta vendedora requieren aprobación administrativa; las publicaciones quedan pendientes hasta que un administrador las apruebe.
+- El panel de administración permite crear categorías y subcategorías para que los vendedores puedan clasificar sus productos.
 - Los controladores y servicios registran inicio, resultado, duración y errores sin escribir argumentos, cuerpos, credenciales ni tokens en los logs.
 - Cada solicitud HTTP recibe un `X-Request-ID`, incluido en los logs para correlacionar el recorrido por filtros, controladores y servicios.
 - Las rutas de carrito y compra requieren un cliente autenticado y carrito no vacío; los recursos administrativos requieren el rol `ADMIN`.
@@ -40,7 +43,7 @@ Construir una base sólida para un e-commerce de productos de ferretería que pe
 
 Se definieron las entidades principales del negocio y sus relaciones:
 
-- `Usuario`, `UsuarioCliente` y `UsuarioAdmin`.
+- `Usuario`, `UsuarioCliente`, `UsuarioVendedor` y `UsuarioAdmin`.
 - `Categoria` y `Subcategoria`.
 - `Producto`.
 - `Carrito` y `CarritoItem`.
@@ -50,7 +53,7 @@ Se definieron las entidades principales del negocio y sus relaciones:
 
 También se definieron enumeraciones para los roles y estados del sistema:
 
-- Roles: `ADMIN` y `CLIENTE`.
+- Roles: `ADMIN`, `CLIENTE` y `VENDEDOR`.
 - Estado de usuario.
 - Estado de pedido.
 - Estado de pago.
@@ -99,7 +102,7 @@ La carga y eliminación de imágenes se delega a Cloudinary. El flujo contempla:
 
 Se agregaron pruebas unitarias para la lógica de servicios. Las pruebas utilizan mocks para repositorios y servicios externos, por lo que no dependen de una base de datos real ni de Cloudinary para validar las reglas principales.
 
-En los resultados Maven disponibles en `backend/target/surefire-reports` se registran **168 pruebas ejecutadas, sin fallos ni errores**.
+En los resultados Maven disponibles en `backend/target/surefire-reports` se registran **175 pruebas ejecutadas, sin fallos ni errores**.
 
 ### 6. Preparación para ejecución local y contenedores
 
@@ -140,6 +143,8 @@ La referencia de endpoints, parámetros y cuerpos JSON está en [API & Service C
 ### Usuarios
 
 - Registro de clientes.
+- Solicitud pública de cuenta vendedora, inicialmente inactiva y pendiente de aprobación.
+- Aprobación administrativa de vendedores desde el panel de administración.
 - Creación de usuarios por parte de un administrador.
 - Normalización y validación de emails.
 - Encriptación de contraseñas mediante BCrypt.
@@ -159,6 +164,8 @@ La referencia de endpoints, parámetros y cuerpos JSON está en [API & Service C
 - Consulta administrativa incluyendo productos inactivos.
 - Búsqueda paginada por filtros.
 - Actualización y eliminación de imágenes de productos.
+- Publicación de productos por vendedores con asignación de categoría y subcategoría.
+- Revisión administrativa antes de mostrar publicaciones nuevas en el catálogo.
 
 ### Carrito
 
@@ -201,6 +208,18 @@ La referencia de endpoints, parámetros y cuerpos JSON está en [API & Service C
 - `502 Bad Gateway`: indisponibilidad del servicio de imágenes.
 
 ## Endpoints REST disponibles actualmente
+
+### Registro y publicaciones de vendedor
+
+```text
+POST /api/auth/registro-vendedor
+GET  /api/vendedor/productos
+POST /api/vendedor/productos
+PUT  /api/vendedor/productos/{idProducto}
+PUT  /api/vendedor/productos/{idProducto}/imagen
+```
+
+La solicitud de vendedor se aprueba con `PATCH /api/admin/usuarios/{idUsuario}/estado` y el body `{"activo":true}`. Los productos enviados por vendedores quedan inactivos hasta que un administrador los apruebe con `PATCH /api/admin/productos/{idProducto}/activar`. Los vendedores solo pueden modificar sus propias publicaciones; al editarlas vuelven a quedar pendientes de revisión.
 
 ### Foto del usuario autenticado
 

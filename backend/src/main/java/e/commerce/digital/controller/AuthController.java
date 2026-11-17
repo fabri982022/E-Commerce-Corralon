@@ -3,6 +3,7 @@ package e.commerce.digital.controller;
 import e.commerce.digital.config.JwtService;
 import e.commerce.digital.dto.auth.LoginRequest;
 import e.commerce.digital.dto.auth.RegistroRequest;
+import e.commerce.digital.dto.auth.RegistroVendedorRequest;
 import e.commerce.digital.dto.usuario.UsuarioResponse;
 import e.commerce.digital.service.UsuarioService;
 import jakarta.validation.Valid;
@@ -33,6 +34,13 @@ public class AuthController {
     @PostMapping("/registro")
     public ResponseEntity<UsuarioResponse> registrar(@Valid @RequestBody RegistroRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.registrar(req));
+    }
+
+    /** Solicita una cuenta vendedora; un administrador debe aprobarla para habilitar el login. */
+    @PostMapping("/registro-vendedor")
+    public ResponseEntity<UsuarioResponse> solicitarAltaVendedor(
+            @Valid @RequestBody RegistroVendedorRequest req) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioService.solicitarAltaVendedor(req));
     }
 
     /** Inicia una sesión HTTP para los siguientes pedidos del navegador. */

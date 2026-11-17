@@ -1,12 +1,14 @@
 package e.commerce.digital.mapper;
 
 import e.commerce.digital.dto.auth.RegistroRequest;
+import e.commerce.digital.dto.auth.RegistroVendedorRequest;
 import e.commerce.digital.dto.usuario.UsuarioAdminRequest;
 import e.commerce.digital.dto.usuario.UsuarioResponse;
 import e.commerce.digital.dto.usuario.UsuarioUpdateRequest;
 import e.commerce.digital.models.Usuario;
 import e.commerce.digital.models.UsuarioAdmin;
 import e.commerce.digital.models.UsuarioCliente;
+import e.commerce.digital.models.UsuarioVendedor;
 import e.commerce.digital.util.enumerated.Rol;
 import org.springframework.stereotype.Component;
 
@@ -27,9 +29,25 @@ public class UsuarioMapper {
         return u;
     }
 
+    public UsuarioVendedor toVendedor(RegistroVendedorRequest req, String passwordHash) {
+        UsuarioVendedor u = new UsuarioVendedor();
+        u.setNombre(req.nombre());
+        u.setApellido(req.apellido());
+        u.setEmail(req.email());
+        u.setPasswordHash(passwordHash);
+        u.setTelefono(req.telefono());
+        u.setDireccion(req.direccion());
+        u.setActivo(false);
+        return u;
+    }
+
     // Alta hecha por el administrador: instancia la subclase según el rol
     public Usuario toEntity(UsuarioAdminRequest req, String passwordHash) {
-        Usuario u = req.rol() == Rol.ADMIN ? new UsuarioAdmin() : new UsuarioCliente();
+        Usuario u = switch (req.rol()) {
+            case ADMIN -> new UsuarioAdmin();
+            case CLIENTE -> new UsuarioCliente();
+            case VENDEDOR -> new UsuarioVendedor();
+        };
         u.setNombre(req.nombre());
         u.setApellido(req.apellido());
         u.setEmail(req.email());

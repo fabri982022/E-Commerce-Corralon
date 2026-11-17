@@ -60,6 +60,17 @@ class JwtServiceTest {
     }
 
     @Test
+    void tokenAcceptsSellerRole() {
+        var authentication = new UsernamePasswordAuthenticationToken(
+                "vendedor@corralon.local",
+                "password",
+                List.of(new SimpleGrantedAuthority("ROLE_VENDEDOR")));
+
+        assertThat(jwtService.validateToken(jwtService.createToken(authentication)).roles())
+                .containsExactly("VENDEDOR");
+    }
+
+    @Test
     void rejectsMalformedAndEmptyTokens() {
         assertThatThrownBy(() -> jwtService.validateToken(null))
                 .isInstanceOf(JwtService.InvalidJwtException.class);

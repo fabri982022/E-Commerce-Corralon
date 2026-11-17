@@ -22,7 +22,7 @@ export function ProtectedRoute({ children, role }) {
 
   if (loading) return <Loading />;
   if (!user) return <Navigate to="/ingresar" replace state={{ returnTo: location }} />;
-  if (role && user.rol !== role) return <Navigate to={user.rol === 'ADMIN' ? '/admin' : '/'} replace />;
+  if (role && user.rol !== role) return <Navigate to={user.rol === 'ADMIN' ? '/admin' : user.rol === 'VENDEDOR' ? '/vendedor' : '/'} replace />;
   return children;
 }
 

@@ -1,6 +1,7 @@
 package e.commerce.digital.service;
 
 import e.commerce.digital.dto.auth.RegistroRequest;
+import e.commerce.digital.dto.auth.RegistroVendedorRequest;
 import e.commerce.digital.dto.common.PageResponse;
 import e.commerce.digital.dto.usuario.UsuarioAdminRequest;
 import e.commerce.digital.dto.usuario.UsuarioEstadoRequest;
@@ -43,7 +44,18 @@ public class UsuarioService {
         return usuarioMapper.toResponse(usuarioRepository.save(cliente));
     }
 
-    /** Alta hecha por un administrador: crea un cliente o un administrador según el rol. */
+    /** Solicitud pública de cuenta vendedora: requiere aprobación administrativa antes de iniciar sesión. */
+    @Transactional
+    public UsuarioResponse solicitarAltaVendedor(RegistroVendedorRequest req) {
+        String email = normalizar(req.email());
+        validarEmailLibre(email);
+
+        var vendedor = usuarioMapper.toVendedor(req, passwordEncoder.encode(req.password()));
+        vendedor.setEmail(email);
+        return usuarioMapper.toResponse(usuarioRepository.save(vendedor));
+    }
+
+    /** Alta hecha por un administrador: crea el usuario con el rol seleccionado. */
     @Transactional
     public UsuarioResponse crearPorAdmin(UsuarioAdminRequest req) {
         String email = normalizar(req.email());

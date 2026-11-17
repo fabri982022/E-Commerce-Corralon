@@ -26,7 +26,8 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
             JOIN p.subcategoria s
             JOIN s.categoria c
             WHERE (:soloActivos = false
-                   OR (p.activo = true AND s.activo = true AND c.activo = true))
+                   OR (p.activo = true AND s.activo = true AND c.activo = true
+                       AND (p.vendedor IS NULL OR p.vendedor.activo = true)))
               AND (:texto IS NULL
                    OR LOWER(p.nombre) LIKE LOWER(CONCAT('%', :texto, '%'))
                    OR LOWER(p.descripcion) LIKE LOWER(CONCAT('%', :texto, '%')))
@@ -41,6 +42,10 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
 
     // Para impedir borrar o desactivar subcategorías con productos asociados
     boolean existsBySubcategoria_IdSubcategoria(Long idSubcategoria);
+
+    List<Producto> findByVendedor_IdUsuarioOrderByIdProductoDesc(Long idUsuario);
+
+    Optional<Producto> findByIdProductoAndVendedor_Email(Long idProducto, String email);
 
     /**
      * Opción A para stock (NO usada por PedidoService): bloqueo pesimista.
